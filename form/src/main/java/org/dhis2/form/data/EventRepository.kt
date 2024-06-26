@@ -368,21 +368,12 @@ class EventRepository(
             valueType = ValueType.ORGANISATION_UNIT,
             mandatory = true,
             optionSet = null,
-            value = getStoredOrgUnit(),
+            value = event?.organisationUnit(),
             programStageSection = EVENT_DETAILS_SECTION_UID,
             editable = eventMode == EventMode.NEW,
             description = null,
             orgUnitSelectorScope = programUid?.let { OrgUnitSelectorScope.ProgramCaptureScope(it) },
         )
-    }
-
-    private fun getStoredOrgUnit(): String? {
-        return event?.organisationUnit()?.let { orgUnitUID ->
-            d2.organisationUnitModule().organisationUnits()
-                .byUid()
-                .eq(orgUnitUID)
-                .one().blockingGet()
-        }?.displayName()
     }
 
     private fun createEventReportDateField(): FieldUiModel {
