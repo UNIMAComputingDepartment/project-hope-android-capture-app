@@ -6,7 +6,7 @@ import org.dhis2.commons.resources.MetadataIconProvider;
 import org.dhis2.usescases.main.program.ProgramDownloadState;
 import org.dhis2.usescases.main.program.ProgramUiModel;
 import org.dhis2.usescases.main.program.ProgramViewModelMapper;
-import org.dhis2.utils.DateUtils;
+import org.dhis2.commons.date.DateUtils;
 import org.hisp.dhis.android.core.D2;
 import org.hisp.dhis.android.core.common.State;
 import org.hisp.dhis.android.core.enrollment.EnrollmentCreateProjection;
@@ -107,8 +107,6 @@ public class TeiProgramListRepositoryImpl implements TeiProgramListRepository {
                                 0,
                                 "",
                                 State.SYNCED,
-                                false,
-                                false,
                                 metadataIconProvider.invoke(program.style())
                         )
                 )

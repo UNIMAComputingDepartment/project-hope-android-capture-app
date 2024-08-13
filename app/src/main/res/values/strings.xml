@@ -964,4 +964,9 @@
     <string name="importing_database">Importing database</string>
     <string name="re_open_to_edit">Re-open form to edit</string>
     <string name="empty_search_attributes_message">There are no search fields configured to use.\nPlease contact your admin.</string>
+    <string name="successful_sync">Successful sync</string>
+    <string name="syncing_something">Syncing %s…</string>
+    <string name="file_resources">file resources</string>
+    <string name="show_description">Show description</string>
+    <string name="hide_description">Hide description</string>
 </resources>
