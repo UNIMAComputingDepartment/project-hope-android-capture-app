@@ -364,11 +364,20 @@ class RelationshipFragment : FragmentGlobalAbstract(), RelationshipView, OnMapCl
     }
 
     override fun showDeleteRelationshipConfirmationDialog(relationshipUid: String, relatedTeiName: String) {
+        val title = if (presenter.teiInstanceName != null)
+                ContextCompat.getString(binding.root.context, R.string.delete_relationship_dialog_title)
+                .format(relatedTeiName, presenter.teiInstanceName, presenter.teiTypeName)
+            else ContextCompat.getString(binding.root.context, R.string.delete_relationship_dialog_title_this)
+                .format(relatedTeiName, presenter.teiTypeName)
+        val description = if (presenter.teiInstanceName != null)
+                ContextCompat.getString(binding.root.context, R.string.delete_relationship_dialog_message)
+                .format(relatedTeiName, presenter.teiInstanceName, presenter.teiTypeName)
+            else ContextCompat.getString(binding.root.context, R.string.delete_relationship_dialog_message_this)
+                .format(relatedTeiName, presenter.teiTypeName)
+
         DeleteBottomSheetDialog(
-            title = ContextCompat.getString(binding.root.context, R.string.delete_relationship_dialog_title)
-                .format(relatedTeiName, presenter.teiInstanceName, presenter.teiTypeName),
-            description =ContextCompat.getString(binding.root.context, R.string.delete_relationship_dialog_message)
-                .format(relatedTeiName, presenter.teiInstanceName, presenter.teiTypeName),
+            title = title,
+            description = description,
             mainButtonText = ContextCompat.getString(binding.root.context, R.string.remove),
             deleteForever = false,
             onMainButtonClick = {
@@ -379,7 +388,6 @@ class RelationshipFragment : FragmentGlobalAbstract(), RelationshipView, OnMapCl
             DeleteBottomSheetDialog.TAG,
         )
     }
-
     companion object {
         const val TEI_A_UID = "TEI_A_UID"
 
