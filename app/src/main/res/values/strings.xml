@@ -978,4 +978,6 @@
     <string name="hide_fields">Hide fields</string>
     <string name="delete_relationship_dialog_title">Remove %s from %s %s</string>
     <string name="delete_relationship_dialog_message">%s will be removed from %s %s</string>
+    <string name="delete_relationship_dialog_title_this">Remove %s from this %s</string>
+    <string name="delete_relationship_dialog_message_this">%s will be removed from this %s</string>
 </resources>
