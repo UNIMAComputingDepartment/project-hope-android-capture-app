@@ -121,7 +121,7 @@ class SearchTEIViewModel(
             _programsToBlockDirectEnrollment.postValue(targetPrograms)
 
             val currentProgram = searchRepository.currentProgram()
-            _currentProgram.postValue(currentProgram!!)
+            currentProgram?.let { _currentProgram.postValue(it) }?:_currentProgram.postValue("dummyPrograms")
         }
     }
 
@@ -170,7 +170,8 @@ class SearchTEIViewModel(
 
     private fun hasActiveFilters() = _filtersActive.value == true
 
-    fun shouldShowCreateButton() = !_programsToBlockDirectEnrollment.value?.contains(_currentProgram.value!!)!!
+    fun shouldShowCreateButton() =
+        !_programsToBlockDirectEnrollment.value?.contains(_currentProgram.value)!!
 
     fun setMapScreen() {
         _screenState.value.takeIf { it?.screenState == SearchScreenState.LIST }?.let {

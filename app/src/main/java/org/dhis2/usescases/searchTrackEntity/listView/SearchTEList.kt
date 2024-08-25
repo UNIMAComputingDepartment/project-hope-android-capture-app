@@ -40,6 +40,7 @@ import org.dhis2.usescases.searchTrackEntity.ui.CreateNewButton
 import org.dhis2.usescases.searchTrackEntity.ui.FullSearchButtonAndWorkingList
 import org.dhis2.usescases.searchTrackEntity.ui.mapper.TEICardMapper
 import org.dhis2.utils.isLandscape
+import timber.log.Timber
 import javax.inject.Inject
 
 const val ARG_FROM_RELATIONSHIP = "ARG_FROM_RELATIONSHIP"
@@ -186,6 +187,8 @@ class SearchTEList : FragmentGlobalAbstract() {
                     val queryData = remember(viewModel.uiState) {
                         viewModel.uiState.searchedItems
                     }
+
+                    Timber.tag("PROGRAMS_CURRENT_HERE").d(viewModel.shouldShowCreateButton().toString())
 
                     FullSearchButtonAndWorkingList(
                         teTypeName = teTypeName!!,
