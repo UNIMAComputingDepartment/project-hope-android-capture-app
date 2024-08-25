@@ -67,10 +67,8 @@ class SearchTEIViewModel(
     }
 
     private val _programsToBlockDirectEnrollment = MutableLiveData<List<String>>()
-    val programsToBlockDirectEnrollment: LiveData<List<String>> = _programsToBlockDirectEnrollment
 
     private val _currentProgram = MutableLiveData<String>()
-    val currentProgram: LiveData<String> = _currentProgram
 
 
     private val _legacyInteraction = MutableLiveData<LegacyInteraction?>()
@@ -123,7 +121,7 @@ class SearchTEIViewModel(
             _programsToBlockDirectEnrollment.postValue(targetPrograms)
 
             val currentProgram = searchRepository.currentProgram()
-            _currentProgram.postValue(currentProgram)
+            _currentProgram.postValue(currentProgram!!)
         }
     }
 
@@ -171,6 +169,8 @@ class SearchTEIViewModel(
     }
 
     private fun hasActiveFilters() = _filtersActive.value == true
+
+    fun shouldShowCreateButton() = !_programsToBlockDirectEnrollment.value?.contains(_currentProgram.value!!)!!
 
     fun setMapScreen() {
         _screenState.value.takeIf { it?.screenState == SearchScreenState.LIST }?.let {

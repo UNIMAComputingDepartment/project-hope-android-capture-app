@@ -103,12 +103,15 @@ fun SearchButton(
     modifier: Modifier = Modifier,
     createButtonVisible: Boolean = true,
     onClick: () -> Unit,
+    canCreateEntity:Boolean = true
 ) {
-    val textId = if (createButtonVisible) {
+    val textId = if (createButtonVisible || canCreateEntity) {
         R.string.search_te_type
     } else {
-        R.string.search_add_new_te_type
+            R.string.search_add_new_te_type
+
     }
+
 
     OutlinedButton(
         modifier = Modifier
@@ -210,11 +213,13 @@ fun SearchButtonWithQuery(
 fun WrappedSearchButton(
     teTypeName: String,
     onClick: () -> Unit,
+    canCreateEntity: Boolean = true
 ) {
     SearchButton(
         modifier = Modifier.wrapContentWidth(align = Alignment.CenterHorizontally),
         onClick = onClick,
         teTypeName = teTypeName,
+        canCreateEntity = canCreateEntity
     )
 }
 
@@ -232,7 +237,7 @@ fun FullSearchButtonAndWorkingList(
     onCloseFilters: () -> Unit = {},
     onClearSearchQuery: () -> Unit = {},
     workingListViewModel: WorkingListViewModel? = null,
-    shouldShowCreateButton: Boolean = true
+    shouldShowCreateActionGuide: Boolean = true
 ) {
     Column(modifier = modifier) {
         if (!isLandscape || queryData.isNotEmpty()) {
@@ -245,29 +250,30 @@ fun FullSearchButtonAndWorkingList(
                 ),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (shouldShowCreateButton) {
-                    Column(
-                        modifier = Modifier
-                            .wrapContentHeight()
-                            .weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.Spacing8),
-                    ) {
-                        if (queryData.isNotEmpty()) {
-                            SearchButtonWithQuery(
-                                modifier = Modifier.fillMaxWidth(),
-                                queryData = queryData,
-                                onClick = onSearchClick,
-                                onClearSearchQuery = onClearSearchQuery,
-                            )
-                        } else {
-                            SearchAndCreateTEIButton(
-                                onSearchClick = onSearchClick,
-                                teTypeName = teTypeName,
-                                createButtonVisible = createButtonVisible,
-                                onEnrollClick = onEnrollClick,
-                            )
-                        }
+
+                Column(
+                    modifier = Modifier
+                        .wrapContentHeight()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.Spacing8),
+                ) {
+                    if (queryData.isNotEmpty()) {
+                        SearchButtonWithQuery(
+                            modifier = Modifier.fillMaxWidth(),
+                            queryData = queryData,
+                            onClick = onSearchClick,
+                            onClearSearchQuery = onClearSearchQuery,
+                        )
+                    } else {
+                        SearchAndCreateTEIButton(
+                            onSearchClick = onSearchClick,
+                            teTypeName = teTypeName,
+                            createButtonVisible = createButtonVisible,
+                            onEnrollClick = onEnrollClick,
+                            canCreateEntity = shouldShowCreateActionGuide
+                        )
                     }
+
                 }
 
                 if (closeFilterVisibility) {
@@ -296,7 +302,7 @@ fun FullSearchButtonAndWorkingList(
             }
         }
 
-//        Spacer(modifier = Modifier.requiredHeight(Spacing.Spacing16))
+        Spacer(modifier = Modifier.requiredHeight(Spacing.Spacing16))
 
         workingListViewModel?.let {
             WorkingListChipGroup(workingListViewModel = it)
@@ -310,12 +316,14 @@ private fun SearchAndCreateTEIButton(
     teTypeName: String,
     createButtonVisible: Boolean,
     onEnrollClick: () -> Unit,
+    canCreateEntity: Boolean=true
 ) {
     SearchButton(
         modifier = Modifier.fillMaxWidth(),
         onClick = onSearchClick,
         teTypeName = teTypeName,
         createButtonVisible = createButtonVisible,
+        canCreateEntity = canCreateEntity
     )
 
     if (createButtonVisible) {
@@ -645,8 +653,7 @@ fun SearchFullWidthPreview() {
 @Preview(showBackground = true, backgroundColor = 0xFFF)
 @Composable
 fun SearchWrapWidthPreview() {
-    WrappedSearchButton(teTypeName = "Person") {
-    }
+    WrappedSearchButton(teTypeName = "Person", onClick = {})
 }
 
 @ExperimentalAnimationApi
