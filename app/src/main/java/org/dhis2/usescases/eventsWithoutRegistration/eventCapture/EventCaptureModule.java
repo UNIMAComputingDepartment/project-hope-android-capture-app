@@ -18,18 +18,18 @@ import org.dhis2.data.forms.EventRepository;
 import org.dhis2.data.forms.FormRepository;
 import org.dhis2.data.forms.dataentry.SearchTEIRepository;
 import org.dhis2.data.forms.dataentry.SearchTEIRepositoryImpl;
-import org.dhis2.mobileProgramRules.EvaluationType;
-import org.dhis2.mobileProgramRules.RuleEngineHelper;
 import org.dhis2.form.data.FileController;
 import org.dhis2.form.data.FormValueStore;
 import org.dhis2.form.data.RulesRepository;
 import org.dhis2.form.data.UniqueAttributeController;
 import org.dhis2.form.model.RowAction;
 import org.dhis2.form.ui.FieldViewModelFactory;
-import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.autoenrollment.AutoEnrollmentManager;
-import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.autoenrollment.AutoEnrollmentManagerImpl;
+import org.dhis2.mobileProgramRules.EvaluationType;
+import org.dhis2.mobileProgramRules.RuleEngineHelper;
 import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.domain.ConfigureEventCompletionDialog;
 import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.provider.EventCaptureResourcesProvider;
+import org.dhis2.usescases.workflowredesign.WorkflowRedesignManager;
+import org.dhis2.usescases.workflowredesign.WorkflowRedesignManagerImpl;
 import org.dhis2.utils.customviews.navigationbar.NavigationPageConfigurator;
 import org.hisp.dhis.android.core.D2;
 
@@ -55,7 +55,7 @@ public class EventCaptureModule {
                                                     SchedulerProvider schedulerProvider,
                                                     PreferenceProvider preferences,
                                                     ConfigureEventCompletionDialog configureEventCompletionDialog,
-                                                    AutoEnrollmentManager autoEnrollmentManager) {
+                                                    WorkflowRedesignManager workflowRedesignManager) {
         return new EventCapturePresenterImpl(
                 view,
                 eventUid,
@@ -63,7 +63,7 @@ public class EventCaptureModule {
                 schedulerProvider,
                 preferences,
                 configureEventCompletionDialog,
-                autoEnrollmentManager);
+                workflowRedesignManager);
     }
 
     @Provides
@@ -163,7 +163,7 @@ public class EventCaptureModule {
 
     @Provides
     @PerActivity
-    AutoEnrollmentManager providesAutoEnrollmentManager(D2 d2){
-        return new AutoEnrollmentManagerImpl(d2);
+    WorkflowRedesignManager providesWorkFlowManager(D2 d2){
+        return new WorkflowRedesignManagerImpl(d2);
     }
 }
