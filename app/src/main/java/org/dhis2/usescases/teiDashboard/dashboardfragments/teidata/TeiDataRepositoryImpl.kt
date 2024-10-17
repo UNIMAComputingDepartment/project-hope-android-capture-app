@@ -1,9 +1,12 @@
 package org.dhis2.usescases.teiDashboard.dashboardfragments.teidata
 
+import io.reactivex.Flowable
 import io.reactivex.Single
 import org.dhis2.bindings.profilePicturePath
 import org.dhis2.bindings.userFriendlyValue
+import org.dhis2.commons.bindings.enrollmentInProgram
 import org.dhis2.commons.bindings.program
+import org.dhis2.commons.bindings.programs
 import org.dhis2.commons.data.EventViewModel
 import org.dhis2.commons.data.EventViewModelType
 import org.dhis2.commons.data.StageSection
@@ -11,19 +14,28 @@ import org.dhis2.commons.date.DateUtils
 import org.dhis2.commons.resources.DhisPeriodUtils
 import org.dhis2.commons.resources.MetadataIconProvider
 import org.dhis2.ui.toColor
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.MembershipModel
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.MembershipProgramMapperModel
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.TargetEnrollmentStatus
+import org.dhis2.usescases.workflowredesign.WorkflowRedesignManager
 import org.hisp.dhis.android.core.D2
 import org.hisp.dhis.android.core.arch.repositories.scope.RepositoryScope
 import org.hisp.dhis.android.core.category.CategoryCombo
 import org.hisp.dhis.android.core.common.ValueType
 import org.hisp.dhis.android.core.enrollment.Enrollment
+import org.hisp.dhis.android.core.enrollment.EnrollmentStatus
 import org.hisp.dhis.android.core.event.Event
 import org.hisp.dhis.android.core.event.EventCollectionRepository
 import org.hisp.dhis.android.core.event.EventStatus
 import org.hisp.dhis.android.core.organisationunit.OrganisationUnit
 import org.hisp.dhis.android.core.period.PeriodType
 import org.hisp.dhis.android.core.program.Program
+import org.hisp.dhis.android.core.relationship.RelationshipHelper
+import org.hisp.dhis.android.core.relationship.RelationshipItem
+import org.hisp.dhis.android.core.relationship.RelationshipItemTrackedEntityInstance
 import org.hisp.dhis.android.core.trackedentity.TrackedEntityInstance
 import org.hisp.dhis.mobile.ui.designsystem.theme.SurfaceColor
+import timber.log.Timber
 import java.util.Locale
 
 class TeiDataRepositoryImpl(
@@ -33,6 +45,7 @@ class TeiDataRepositoryImpl(
     private val enrollmentUid: String?,
     private val periodUtils: DhisPeriodUtils,
     private val metadataIconProvider: MetadataIconProvider,
+    private val workflowRedesignManager: WorkflowRedesignManager
 ) : TeiDataRepository {
 
     override fun getTEIEnrollmentEvents(
@@ -174,14 +187,14 @@ class TeiDataRepositoryImpl(
 
                     val canAddEventToEnrollment = enrollmentUid?.let {
                         programStage.access()?.data()?.write() == true &&
-                            d2.eventModule().eventService().blockingCanAddEventToEnrollment(
-                                it,
-                                programStage.uid(),
-                            )
+                                d2.eventModule().eventService().blockingCanAddEventToEnrollment(
+                                    it,
+                                    programStage.uid(),
+                                )
                     } ?: false
 
                     val showAllEvents = selectedStage.showAllEvents &&
-                        selectedStage.stageUid == programStage.uid()
+                            selectedStage.stageUid == programStage.uid()
 
                     eventViewModels.add(
                         EventViewModel(
@@ -458,4 +471,125 @@ class TeiDataRepositoryImpl(
     private fun getOrgUnitCollectionRepositoryByCaptureScope() =
         d2.organisationUnitModule().organisationUnits()
             .byOrganisationUnitScope(OrganisationUnit.Scope.SCOPE_DATA_CAPTURE)
+
+    override fun getTeiRelationships(): Flowable<MembershipProgramMapperModel> {
+
+        val rels = workflowRedesignManager.getRelationshipDefitionConfiguration().blockingFirst(
+            listOf()
+        )
+
+        val targetProgram = rels.find { it.sourceProgram == programUid }
+
+        val trackEnrollmentsProgramName =
+            d2.programs().find { it.uid() == targetProgram?.monitorProgramEnrollmentStatusId }
+                ?.displayName() ?: ""
+
+        val builtModel = targetProgram?.let { configModel ->
+
+            val relationShipMembers = Single.fromCallable {
+                d2.relationshipModule().relationships().getByItem(
+                    RelationshipItem.builder().trackedEntityInstance(
+                        RelationshipItemTrackedEntityInstance.builder()
+                            .trackedEntityInstance(teiUid)
+                            .build(),
+                    ).build(),
+                )
+            }.map { relationShipList ->
+                relationShipList.map {
+                    it.to()?.trackedEntityInstance()
+                        ?.trackedEntityInstance()
+                }.map { entity ->
+                    val enrollments =
+                        d2.enrollmentModule().enrollments().byTrackedEntityInstance().eq(entity)
+                            .byProgram()
+                            .eq(configModel.monitorProgramEnrollmentStatusId).blockingGet()
+
+                    val owningProgram = d2.enrollmentModule()
+                        .enrollments().byTrackedEntityInstance()
+                        .eq(entity).blockingGet()[0].program()
+
+                    val enrollmentId = if (enrollments.isNotEmpty()) {
+                        d2.enrollmentInProgram(
+                            entity!!,
+                            configModel.monitorProgramEnrollmentStatusId!!
+                        )!!.uid()
+                    } else {
+                        d2.enrollmentInProgram(entity!!, owningProgram!!)!!.uid()
+
+                    }
+
+                    val entityEnrollmentStatus = enrollments.map { enrollment ->
+                        val programName =
+                            d2.programs().find { it.uid() == enrollment.program() }?.displayName()
+                                ?: ""
+                        val enrollmentStatus = enrollment.status()
+                        TargetEnrollmentStatus(programName, enrollmentStatus!!)
+                    }
+
+                    val attributes = d2.trackedEntityModule().trackedEntityAttributeValues()
+                        .byTrackedEntityInstance()
+                        .eq(entity).blockingGet()
+
+                    val primary =
+                        attributes.find { it.trackedEntityAttribute() == configModel.teiPrimaryAttribute }
+                            ?.value() ?: ""
+
+                    val secondary =
+                        attributes.find { it.trackedEntityAttribute() == configModel.teiSecondaryAttribute }
+                            ?.value() ?: ""
+                    val tertiary =
+                        attributes.find { it.trackedEntityAttribute() == configModel.teiTertiaryAttribute }
+                            ?.value() ?: ""
+                    MembershipModel(
+                        primary,
+                        secondary,
+                        tertiary,
+                        entityEnrollmentStatus,
+                        teiId = entity,
+                        enrollmentId = enrollmentId,
+                        programUid = if (enrollments.isNotEmpty()) {
+                            configModel.monitorProgramEnrollmentStatusId!!
+                        } else {
+                            owningProgram!!
+                        }
+                    )
+                }
+
+            }.blockingGet()
+
+            MembershipProgramMapperModel(
+                program = configModel.sourceProgram,
+                members = relationShipMembers,
+                relationshipDescription = configModel.relationshipDefinitionText,
+                isTrackingEnrollmentDefined = configModel.monitorProgramEnrollmentStatusId != null,
+                trackingProgramName = trackEnrollmentsProgramName,
+                canCreateRelationshipConfig = targetProgram.canCreateRelationShip
+            )
+
+        }
+
+        return if (builtModel != null) {
+            Flowable.just(builtModel)
+        } else Flowable.empty()
+    }
+
+    override fun getCurrentEnrollmentStatus(enrollmentUid: String): Flowable<EnrollmentStatus?>? {
+        return d2.enrollmentModule().enrollments().uid(enrollmentUid).get().map { it.status() }
+            .toFlowable()
+    }
+
+    override fun getCurrentOrgUnit(enrollmentOrgUnit: String): Single<String> {
+        return d2.enrollmentModule().enrollments().uid(enrollmentOrgUnit)
+            .get().map { it.organisationUnit() }
+    }
+
+    override fun addClubMembers(members: List<String>): List<Flowable<String>> {
+        val addedMembers = members.map {
+            val relationship =
+                RelationshipHelper.teiToTeiRelationship(teiUid, it, "Qr4QXrT0JDo")
+            d2.relationshipModule().relationships().add(relationship).toFlowable()
+        }
+        return addedMembers
+    }
+
 }

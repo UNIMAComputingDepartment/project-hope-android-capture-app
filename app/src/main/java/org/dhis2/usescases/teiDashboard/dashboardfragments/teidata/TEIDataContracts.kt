@@ -11,6 +11,8 @@ import org.dhis2.commons.data.EventViewModel
 import org.dhis2.commons.data.StageSection
 import org.dhis2.form.model.EventMode
 import org.dhis2.usescases.general.AbstractActivityContracts
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.DreamsTeiModel
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.ExternalEnrollmentInstance
 import org.hisp.dhis.android.core.program.Program
 import org.hisp.dhis.android.core.program.ProgramStage
 
@@ -30,6 +32,8 @@ class TEIDataContracts {
             currentProgram: Program,
         ): Flowable<StageSection>
 
+        fun openEnrollmentActivity(externalEnrollmentInstance: ExternalEnrollmentInstance)
+
         fun showSyncDialog(eventUid: String, enrollmentUid: String)
         fun displayCatComboOptionSelectorForEvents(data: List<EventViewModel>)
 
@@ -42,5 +46,8 @@ class TEIDataContracts {
             eventMode: EventMode,
             programUid: String,
         )
+
+        fun openAlertDialogForSelectingMembers(dreamsMembers:List<DreamsTeiModel>)
+        fun refleshTeiRelationships()
     }
 }

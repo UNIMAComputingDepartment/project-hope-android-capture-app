@@ -5,6 +5,9 @@ import io.reactivex.Observable
 import io.reactivex.Single
 import org.dhis2.commons.data.tuples.Pair
 import org.dhis2.ui.MetadataIconData
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.DreamsTeiModel
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.ExternalEnrollmentInstance
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.ExternalEnrollmentModel
 import org.hisp.dhis.android.core.category.CategoryOptionCombo
 import org.hisp.dhis.android.core.enrollment.Enrollment
 import org.hisp.dhis.android.core.enrollment.EnrollmentStatus
@@ -112,4 +115,10 @@ interface DashboardRepository {
     fun getGrouping(): Boolean
 
     fun setGrouping(groupEvent: Boolean)
+
+    fun createExternalEnrollment(model: ExternalEnrollmentModel): Flowable<ExternalEnrollmentInstance>
+
+    fun getTeiForDreams(programUid:String): Flowable<List<DreamsTeiModel>>
+
+    fun hasRelationshipAccess(relType: String):Single<Boolean>
 }

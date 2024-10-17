@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "APK",
+    "kind": "Directory"
+  },
+  "applicationId": "com.hope.project",
+  "variantName": "dhisRelease",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 135,
+      "versionName": "3.0.0.2",
+      "outputFile": "dhis2-v3.0.0.2.apk"
+    }
+  ],
+  "elementType": "File"
+}

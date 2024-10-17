@@ -19,8 +19,8 @@ import org.dhis2.commons.prefs.PreferenceProviderImpl;
 import org.dhis2.commons.reporting.CrashReportController;
 import org.dhis2.commons.reporting.CrashReportControllerImpl;
 import org.dhis2.commons.resources.ColorUtils;
-import org.dhis2.commons.resources.MetadataIconProvider;
 import org.dhis2.commons.resources.DhisPeriodUtils;
+import org.dhis2.commons.resources.MetadataIconProvider;
 import org.dhis2.commons.resources.ResourceManager;
 import org.dhis2.commons.schedulers.SchedulerProvider;
 import org.dhis2.commons.viewmodel.DispatcherProvider;
@@ -65,9 +65,9 @@ import org.dhis2.maps.mapper.MapRelationshipToRelationshipMapModel;
 import org.dhis2.maps.usecases.MapStyleConfiguration;
 import org.dhis2.maps.utils.DhisMapUtils;
 import org.dhis2.ui.ThemeManager;
-import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.autoenrollment.AutoEnrollmentManager;
-import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.autoenrollment.AutoEnrollmentManagerImpl;
 import org.dhis2.usescases.searchTrackEntity.ui.mapper.TEICardMapper;
+import org.dhis2.usescases.workflowredesign.WorkflowRedesignManager;
+import org.dhis2.usescases.workflowredesign.WorkflowRedesignManagerImpl;
 import org.dhis2.utils.DateUtils;
 import org.dhis2.utils.analytics.AnalyticsHelper;
 import org.hisp.dhis.android.core.D2;
@@ -303,7 +303,7 @@ public class SearchTEModule {
             D2 d2,
             ResourceManager resourceManager,
             DisplayNameProvider displayNameProvider,
-            AutoEnrollmentManager autoEnrollmentManager
+            WorkflowRedesignManager workflowRedesignManager
     ) {
         return new SearchTeiViewModelFactory(
                 searchRepository,
@@ -317,15 +317,15 @@ public class SearchTEModule {
                 new MapStyleConfiguration(d2),
                 resourceManager,
                 displayNameProvider,
-                autoEnrollmentManager
+                workflowRedesignManager
         );
     }
 
 
     @Provides
     @PerActivity
-    AutoEnrollmentManager autoEnrollmentManager(D2 d2){
-        return new AutoEnrollmentManagerImpl(d2);
+    WorkflowRedesignManager autoEnrollmentManager(D2 d2){
+        return new WorkflowRedesignManagerImpl(d2);
     }
 
     @Provides

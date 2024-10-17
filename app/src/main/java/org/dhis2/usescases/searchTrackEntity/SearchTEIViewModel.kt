@@ -30,11 +30,10 @@ import org.dhis2.form.ui.intent.FormIntent
 import org.dhis2.form.ui.provider.DisplayNameProvider
 import org.dhis2.maps.layer.basemaps.BaseMapStyle
 import org.dhis2.maps.usecases.MapStyleConfiguration
-import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.autoenrollment.AutoEnrollmentManager
-import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.autoenrollment.model.AutoEnrollmentConfig
 import org.dhis2.usescases.searchTrackEntity.listView.SearchResult
 import org.dhis2.usescases.searchTrackEntity.searchparameters.model.SearchParametersUiState
 import org.dhis2.usescases.searchTrackEntity.ui.UnableToSearchOutsideData
+import org.dhis2.usescases.workflowredesign.WorkflowRedesignManager
 import org.dhis2.utils.customviews.navigationbar.NavigationPageConfigurator
 import org.hisp.dhis.android.core.arch.helpers.Result
 import org.hisp.dhis.android.core.common.ValueType
@@ -56,7 +55,7 @@ class SearchTEIViewModel(
     private val mapStyleConfig: MapStyleConfiguration,
     private val resourceManager: ResourceManager,
     private val displayNameProvider: DisplayNameProvider,
-    private val autoEnrollmentManager: AutoEnrollmentManager
+    private val workflowRedesignManager: WorkflowRedesignManager
 ) : ViewModel() {
 
     private val _pageConfiguration = MutableLiveData<NavigationPageConfigurator>()
@@ -116,7 +115,7 @@ class SearchTEIViewModel(
                 searchRepository.trackedEntityType.displayName(),
             )
 
-            val targetPrograms = autoEnrollmentManager.getAutoEnrollmentConfiguration()
+            val targetPrograms = workflowRedesignManager.getAutoEnrollmentConfiguration()
                 .blockingFirst().configurations.autoEnrollments.disableManualEnrollement
             _programsToBlockDirectEnrollment.postValue(targetPrograms)
 

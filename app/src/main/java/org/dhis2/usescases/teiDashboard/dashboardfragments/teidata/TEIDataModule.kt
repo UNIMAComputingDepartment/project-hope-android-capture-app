@@ -21,6 +21,8 @@ import org.dhis2.data.forms.dataentry.SearchTEIRepositoryImpl
 import org.dhis2.form.data.FormValueStore
 import org.dhis2.form.data.OptionsRepository
 import org.dhis2.mobileProgramRules.RuleEngineHelper
+import org.dhis2.usescases.workflowredesign.WorkflowRedesignManager
+import org.dhis2.usescases.workflowredesign.WorkflowRedesignManagerImpl
 import org.dhis2.usescases.programEventDetail.usecase.CreateEventUseCase
 import org.dhis2.usescases.teiDashboard.DashboardRepository
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.teievents.ui.mapper.TEIEventCardMapper
@@ -91,6 +93,7 @@ class TEIDataModule(
         d2: D2,
         periodUtils: DhisPeriodUtils,
         metadataIconProvider: MetadataIconProvider,
+        workflowRedesignManager: WorkflowRedesignManager
     ): TeiDataRepository {
         return TeiDataRepositoryImpl(
             d2,
@@ -99,6 +102,7 @@ class TEIDataModule(
             enrollmentUid,
             periodUtils,
             metadataIconProvider,
+            workflowRedesignManager
         )
     }
 
@@ -184,4 +188,10 @@ class TEIDataModule(
 
     @Provides
     fun provideDateUtils() = DateUtils.getInstance()
+
+    @Provides
+    @PerFragment
+    fun providesWorkFlowRedesignManager(d2: D2): WorkflowRedesignManager {
+      return WorkflowRedesignManagerImpl(d2)
+    }
 }

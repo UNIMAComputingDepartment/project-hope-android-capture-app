@@ -2,6 +2,7 @@ package org.dhis2.usescases.teiDashboard
 
 import com.google.gson.reflect.TypeToken
 import dhis2.org.analytics.charts.Charts
+import io.reactivex.Completable
 import io.reactivex.Flowable
 import io.reactivex.Observable
 import io.reactivex.Single
@@ -12,15 +13,20 @@ import org.dhis2.commons.prefs.Preference
 import org.dhis2.commons.prefs.PreferenceProvider
 import org.dhis2.commons.resources.MetadataIconProvider
 import org.dhis2.ui.MetadataIconData
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.DreamsTeiModel
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.ExternalEnrollmentInstance
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.ExternalEnrollmentModel
 import org.dhis2.utils.DateUtils
 import org.dhis2.utils.ValueUtils
 import org.hisp.dhis.android.core.D2
 import org.hisp.dhis.android.core.arch.helpers.UidsHelper.getUidsList
 import org.hisp.dhis.android.core.arch.repositories.scope.RepositoryScope
 import org.hisp.dhis.android.core.category.CategoryOptionCombo
+import org.hisp.dhis.android.core.common.ObjectWithUid
 import org.hisp.dhis.android.core.common.State
 import org.hisp.dhis.android.core.common.ValueType
 import org.hisp.dhis.android.core.enrollment.Enrollment
+import org.hisp.dhis.android.core.enrollment.EnrollmentCreateProjection
 import org.hisp.dhis.android.core.enrollment.EnrollmentStatus
 import org.hisp.dhis.android.core.event.Event
 import org.hisp.dhis.android.core.event.EventStatus
@@ -30,11 +36,17 @@ import org.hisp.dhis.android.core.program.Program
 import org.hisp.dhis.android.core.program.ProgramRuleActionType
 import org.hisp.dhis.android.core.program.ProgramStage
 import org.hisp.dhis.android.core.program.ProgramTrackedEntityAttribute
+import org.hisp.dhis.android.core.relationship.RelationshipConstraintType
+import org.hisp.dhis.android.core.relationship.RelationshipEntityType
+import org.hisp.dhis.android.core.relationship.RelationshipHelper
+import org.hisp.dhis.android.core.relationship.RelationshipItem
+import org.hisp.dhis.android.core.relationship.RelationshipItemTrackedEntityInstance
 import org.hisp.dhis.android.core.relationship.RelationshipType
 import org.hisp.dhis.android.core.systeminfo.SystemInfo
 import org.hisp.dhis.android.core.trackedentity.TrackedEntityAttribute
 import org.hisp.dhis.android.core.trackedentity.TrackedEntityAttributeValue
 import org.hisp.dhis.android.core.trackedentity.TrackedEntityInstance
+import org.hisp.dhis.android.core.trackedentity.TrackedEntityInstanceCreateProjection
 import org.hisp.dhis.mobile.ui.designsystem.theme.SurfaceColor
 import timber.log.Timber
 
@@ -211,10 +223,10 @@ class DashboardRepositoryImpl(
 
     override fun setFollowUp(enrollmentUid: String?): Boolean {
         val followUp = (
-            java.lang.Boolean.TRUE
-                == d2.enrollmentModule().enrollments().uid(enrollmentUid).blockingGet()!!
+                java.lang.Boolean.TRUE
+                        == d2.enrollmentModule().enrollments().uid(enrollmentUid).blockingGet()!!
                     .followUp()
-            )
+                )
         return try {
             d2.enrollmentModule().enrollments().uid(enrollmentUid).setFollowUp(!followUp)
             !followUp
@@ -572,6 +584,87 @@ class DashboardRepositoryImpl(
             Preference.GROUPING,
             groups,
         )
+    }
+
+    override fun createExternalEnrollment(model: ExternalEnrollmentModel): Flowable<ExternalEnrollmentInstance> {
+        val tei = d2.trackedEntityModule()
+            .trackedEntityInstances()
+            .blockingAdd(
+                TrackedEntityInstanceCreateProjection.builder()
+                    .organisationUnit(model.orgUnit)
+                    .trackedEntityType(model.tei)
+                    .build()
+            )
+
+        val relationship =
+            RelationshipHelper.teiToTeiRelationship(teiUid, tei, model.relationshipType)
+        d2.relationshipModule().relationships().blockingAdd(relationship)
+
+        val enrollmentId = d2.enrollmentModule().enrollments()
+            .blockingAdd(
+                EnrollmentCreateProjection.builder()
+                    .program(model.program)
+                    .organisationUnit(model.orgUnit)
+                    .trackedEntityInstance(tei).build()
+            )
+
+
+
+        d2.enrollmentModule().enrollments().uid(enrollmentId)
+            .setEnrollmentDate(org.dhis2.commons.date.DateUtils.getInstance().today)
+        d2.enrollmentModule().enrollments().uid(enrollmentId).setFollowUp(false)
+
+        return Flowable.just(ExternalEnrollmentInstance(enrollmentId, model.program))
+    }
+
+    override fun getTeiForDreams(programUid: String): Flowable<List<DreamsTeiModel>> {
+        val existingClumbeMembers =
+            d2.trackedEntityModule().trackedEntityInstances().byProgramUids(listOf("NrZIZN0hVdM"))
+                .blockingGet().flatMap { trackedEntity ->
+                    d2.relationshipModule()
+                        .relationships()
+                        .byRelationshipType()
+                        .eq("Qr4QXrT0JDo")
+                        .getByItem(
+                            RelationshipItem.builder()
+                                .relationshipItemType(RelationshipConstraintType.FROM)
+                                .trackedEntityInstance(
+                                    RelationshipItemTrackedEntityInstance
+                                        .builder().trackedEntityInstance(trackedEntity.uid())
+                                        .build()
+                                )
+                                .build(),
+                            includeDeleted = true,
+                            onlyAccessible = true
+                        ).map { it.to()?.trackedEntityInstance()?.trackedEntityInstance() }
+                }
+        return Flowable.just(d2.trackedEntityModule().trackedEntityInstances()
+            .byProgramUids(listOf(programUid))
+            .blockingGet()
+            .filter { te ->
+                !existingClumbeMembers.contains(te.uid())
+            }
+            .map {
+                val attributeValues = d2.trackedEntityModule().trackedEntityAttributeValues()
+                    .byTrackedEntityInstance()
+                    .eq(it.uid()).blockingGet()
+                val displayName = attributeValues
+                    .find { value -> value.trackedEntityAttribute() == "X5UOKXdwvbI" }?.value()
+                    ?: ""
+                val dob = attributeValues
+                    .find { value -> value.trackedEntityAttribute() == "HYlWwg511tF" }?.value()
+                    ?: ""
+                val sex = attributeValues
+                    .find { value -> value.trackedEntityAttribute() == "sMXnVr16R9k" }?.value()
+                    ?: ""
+                DreamsTeiModel(displayName, dob, sex, it.uid())
+            })
+    }
+
+    override fun hasRelationshipAccess(relType: String): Single<Boolean> {
+        return d2.relationshipModule().relationshipTypes().uid(relType).get().map {
+            it.access().write() && it.access().read()
+        }
     }
 
     private fun getGroupingOptions(): HashMap<String, Boolean> {

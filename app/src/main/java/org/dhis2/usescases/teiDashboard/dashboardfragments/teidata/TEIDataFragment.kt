@@ -3,11 +3,16 @@ package org.dhis2.usescases.teiDashboard.dashboardfragments.teidata
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -16,6 +21,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.map
 import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.CircleCrop
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
@@ -40,8 +46,10 @@ import org.dhis2.commons.resources.ColorUtils
 import org.dhis2.commons.resources.ResourceManager
 import org.dhis2.commons.sync.OnDismissListener
 import org.dhis2.commons.sync.SyncContext.EnrollmentEvent
+import org.dhis2.databinding.DreamsMembersListBinding
 import org.dhis2.databinding.FragmentTeiDataBinding
 import org.dhis2.form.model.EventMode
+import org.dhis2.usescases.enrollment.EnrollmentActivity
 import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.EventCaptureActivity
 import org.dhis2.usescases.eventsWithoutRegistration.eventInitial.EventInitialActivity
 import org.dhis2.usescases.general.FragmentGlobalAbstract
@@ -49,6 +57,10 @@ import org.dhis2.usescases.teiDashboard.DashboardEnrollmentModel
 import org.dhis2.usescases.teiDashboard.DashboardTEIModel
 import org.dhis2.usescases.teiDashboard.DashboardViewModel
 import org.dhis2.usescases.teiDashboard.TeiDashboardMobileActivity
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.adapter.SearchDreamsMemberAdapter
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.DreamsTeiModel
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.ExternalEnrollmentInstance
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.ExternalEnrollmentModel
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.teievents.EventAdapter
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.teievents.EventCatComboOptionSelector
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.teievents.ui.mapper.TEIEventCardMapper
@@ -66,9 +78,13 @@ import org.hisp.dhis.android.core.program.ProgramStage
 import timber.log.Timber
 import javax.inject.Inject
 
-class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View {
+
+class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
+    OnDreamsTeiSelectionListener {
 
     lateinit var binding: FragmentTeiDataBinding
+
+    private lateinit var alertDialogBinding: DreamsMembersListBinding
 
     @Inject
     lateinit var presenter: TEIDataPresenter
@@ -97,9 +113,12 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View {
     private var eventCatComboOptionSelector: EventCatComboOptionSelector? = null
     private val dashboardViewModel: DashboardViewModel by activityViewModels()
     private val dashboardActivity: TeiDashboardMobileActivity by lazy { context as TeiDashboardMobileActivity }
-
+    private val dreamsMemberAdapter by lazy { SearchDreamsMemberAdapter(this) }
     private var showAllEnrollment = false
     private var programUid: String? = null
+    private var selectedDreamsTei: MutableList<DreamsTeiModel> = mutableListOf()
+
+    private lateinit var selectMembersAlertDialog: AlertDialog
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -172,7 +191,15 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View {
             val displayEventCreationButton by presenter.shouldDisplayEventCreationButton.observeAsState(
                 false,
             )
+            val relationShipMembers by presenter.relationshipModel.observeAsState()
+            val currentProgramId by presenter.currentProgramId.observeAsState()
+            val canCreateRelationship by presenter.canCreateTei.observeAsState()
+            val currentEnrollmentOgUnit by presenter.enrollmentOrgUnit.observeAsState()
+
             val eventCount by presenter.events.map { it.count() }.observeAsState(0)
+            val graduatedSessions by presenter.graduatedSessions.observeAsState()
+            val onGoingSessions by presenter.ongoingSessions.observeAsState()
+
 
             val syncInfoBar = dashboardModel.takeIf { it is DashboardEnrollmentModel }?.let {
                 infoBarMapper.map(
@@ -231,6 +258,17 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View {
                 )
             }
 
+
+            val model = relationShipMembers?.canCreateRelationshipConfig?.let {
+                presenter.hasRelationshipAccess(it.targetRelationship)
+                ExternalEnrollmentModel(
+                    orgUnit = currentEnrollmentOgUnit!!,
+                    program = it.targetProgram,
+                    tei = it.targetTeiType,
+                    relationshipType = it.targetRelationship
+                )
+            }
+
             TeiDetailDashboard(
                 syncData = syncInfoBar,
                 followUpData = followUpInfoBar,
@@ -245,6 +283,14 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View {
                 timelineOnEventCreationOptionSelected = {
                     presenter.onAddNewEventOptionSelected(it, null)
                 },
+                currentProgramId = currentProgramId,
+                relationshipMembers = relationShipMembers,
+                onCreateMemberClick = {
+                    model?.let { presenter.createEnrollment(it) }
+                },
+                canCreateTeiRelationship = canCreateRelationship!!,
+                graduatedSessions = graduatedSessions!!,
+                onGoingSessions = onGoingSessions!!
             )
         }
     }
@@ -338,6 +384,16 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View {
             binding.teiRecycler.adapter = eventAdapter
         }
         return eventAdapter?.stageSelector() ?: Flowable.empty()
+    }
+
+    override fun openEnrollmentActivity(externalEnrollmentInstance: ExternalEnrollmentInstance) {
+        val intent = Intent(requireContext(), EnrollmentActivity::class.java).apply {
+            putExtra(EnrollmentActivity.ENROLLMENT_UID_EXTRA, externalEnrollmentInstance.enrollment)
+            putExtra(EnrollmentActivity.PROGRAM_UID_EXTRA, externalEnrollmentInstance.program)
+            putExtra(EnrollmentActivity.MODE_EXTRA, EnrollmentActivity.EnrollmentMode.NEW)
+            putExtra(EnrollmentActivity.FOR_RELATIONSHIP, false)
+        }
+        dashboardActivity.startActivity(intent)
     }
 
     override fun setEvents(events: List<EventViewModel>) {
@@ -591,5 +647,109 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View {
             fragment.arguments = args
             return fragment
         }
+
+
     }
+
+
+    override fun openAlertDialogForSelectingMembers(dreamsMembers: List<DreamsTeiModel>) {
+        selectMembersAlertDialog = AlertDialog.Builder(requireContext())
+            .create()
+
+        alertDialogBinding = DreamsMembersListBinding.inflate(layoutInflater)
+
+        selectMembersAlertDialog.setView(alertDialogBinding.root)
+
+        if (dreamsMembers.isNotEmpty()) {
+            val sortedMembers = dreamsMembers.map {
+                DreamsTeiModel(
+                    fullName = it.fullName.replaceFirstChar { first -> first.uppercase() },
+                    dob = it.dob,
+                    sex = it.sex,
+                    teiUid = it.teiUid
+                )
+            }.sortedWith(compareBy { it.fullName })
+            dreamsMemberAdapter.setData(sortedMembers)
+        }
+
+        if (dreamsMembers.isEmpty()) {
+            alertDialogBinding.tvNoMemberTextMessage.visibility = View.VISIBLE
+        }
+
+        alertDialogBinding.btnTEIConfirmSelection.isClickable =  selectedDreamsTei.isNotEmpty()
+        alertDialogBinding.btnTEIConfirmSelection.isEnabled =  selectedDreamsTei.isNotEmpty()
+
+
+        alertDialogBinding.dreamsMembersRecyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = dreamsMemberAdapter
+        }
+
+        selectMembersAlertDialog.setCanceledOnTouchOutside(false)
+
+        selectMembersAlertDialog.show()
+
+        val displayRectangle = Rect()
+        val window = requireActivity().window
+
+        window.decorView.getWindowVisibleDisplayFrame(displayRectangle)
+
+        selectMembersAlertDialog.window!!.setLayout(
+            (displayRectangle.width() *
+                    0.9f).toInt(), (displayRectangle.height() * 0.8f).toInt()
+        )
+
+        alertDialogBinding.btnTEICancelSelection.setOnClickListener {
+            selectMembersAlertDialog.dismiss()
+            selectedDreamsTei.clear()
+            dreamsMemberAdapter.setData(ArrayList())
+        }
+
+        alertDialogBinding.ivFilterDreamsMembersByAngeAndName.editText?.addTextChangedListener(
+            object : TextWatcher {
+                override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
+                    //Nothing
+                }
+
+                override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
+                    //Nothing again here
+                }
+
+                override fun afterTextChanged(p0: Editable?) {
+                    dreamsMemberAdapter.filter.filter(p0.toString())
+
+                }
+
+            })
+    }
+
+    override fun refleshTeiRelationships() {
+        presenter.getTeiRelationships()
+        selectMembersAlertDialog.dismiss()
+        dreamsMemberAdapter.setData(ArrayList())
+        selectedDreamsTei.addAll(emptyArray())
+    }
+
+    override fun onSelected(tei: DreamsTeiModel) {
+        selectedDreamsTei.add(tei)
+        alertDialogBinding.btnTEIConfirmSelection.isClickable = selectedDreamsTei.isNotEmpty()
+        alertDialogBinding.btnTEIConfirmSelection.isEnabled =  selectedDreamsTei.isNotEmpty()
+
+        alertDialogBinding.btnTEIConfirmSelection.setOnClickListener {
+            if (selectedDreamsTei == null) {
+                Toast.makeText(requireContext(), "Select members", Toast.LENGTH_SHORT).show()
+            } else {
+                presenter.addClubMembers(selectedDreamsTei.map { it.teiUid })
+            }
+        }
+    }
+
+    override fun onDeselected(tei: DreamsTeiModel) {
+        selectedDreamsTei.remove(tei)
+        alertDialogBinding.btnTEIConfirmSelection.isClickable =  selectedDreamsTei.isNotEmpty()
+        alertDialogBinding.btnTEIConfirmSelection.isEnabled =  selectedDreamsTei.isNotEmpty()
+
+    }
+
 }
+

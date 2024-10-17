@@ -19,4 +19,6 @@ class AppModule(private val application: App) {
     fun colorUtils(): ColorUtils {
         return ColorUtils()
     }
+
+
 }

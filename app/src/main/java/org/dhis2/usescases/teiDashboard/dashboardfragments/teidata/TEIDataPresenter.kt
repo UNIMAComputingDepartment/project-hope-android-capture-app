@@ -3,6 +3,7 @@ package org.dhis2.usescases.teiDashboard.dashboardfragments.teidata
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.annotation.VisibleForTesting
 import androidx.core.app.ActivityOptionsCompat
 import androidx.lifecycle.LiveData
@@ -10,6 +11,7 @@ import androidx.lifecycle.MutableLiveData
 import io.reactivex.Completable
 import io.reactivex.Flowable
 import io.reactivex.Observable
+import io.reactivex.Single
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.processors.BehaviorProcessor
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +42,9 @@ import org.dhis2.usescases.programStageSelection.ProgramStageSelectionActivity
 import org.dhis2.usescases.teiDashboard.DashboardRepository
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.TeiDataIdlingResourceSingleton.decrement
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.TeiDataIdlingResourceSingleton.increment
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.DreamsTeiModel
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.ExternalEnrollmentModel
+import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.MembershipProgramMapperModel
 import org.dhis2.usescases.teiDashboard.domain.GetNewEventCreationTypeOptions
 import org.dhis2.usescases.teiDashboard.ui.EventCreationOptions
 import org.dhis2.utils.Result
@@ -86,8 +91,31 @@ class TEIDataPresenter(
     private val _events: MutableLiveData<List<EventViewModel>> = MutableLiveData()
     val events: LiveData<List<EventViewModel>> = _events
 
+
+    private val _relationshipMemberModel: MutableLiveData<MembershipProgramMapperModel> =
+        MutableLiveData()
+    val relationshipModel: LiveData<MembershipProgramMapperModel> = _relationshipMemberModel
+
+    private val _currentProgramId: MutableLiveData<String> = MutableLiveData()
+    val currentProgramId: LiveData<String> = _currentProgramId
+
+    private val _enrollmentOrgUnit: MutableLiveData<String> = MutableLiveData("")
+    val enrollmentOrgUnit: MutableLiveData<String> = _enrollmentOrgUnit
+
+    private val _canCreateTei: MutableLiveData<Boolean> = MutableLiveData(false)
+    val canCreateTei: LiveData<Boolean> = _canCreateTei
+
+
+    private val _ongoingSessions: MutableLiveData<Int> = MutableLiveData(0)
+    val ongoingSessions: MutableLiveData<Int> = _ongoingSessions
+
+
+    private val _graduatedSessions: MutableLiveData<Int> = MutableLiveData(0)
+    val graduatedSessions: MutableLiveData<Int> = _graduatedSessions
+
     fun init() {
         programUid?.let {
+            _currentProgramId.postValue(it)
             val program = d2.program(it) ?: throw NullPointerException()
             val sectionFlowable = view.observeStageSelection(program)
                 .startWith(StageSection("", false, false))
@@ -140,6 +168,31 @@ class TEIDataPresenter(
         }
 
         updateCreateEventButtonVisibility()
+
+        getTeiRelationships()
+
+        compositeDisposable
+            .add(
+                teiDataRepository.getCurrentOrgUnit(enrollmentUid)
+                    .subscribeOn(schedulerProvider.io())
+                    .observeOn(schedulerProvider.ui())
+                    .subscribe(
+                        {
+                            it?.let { orgId-> _enrollmentOrgUnit.postValue(orgId)}
+                        },
+                        Timber::e
+                    )
+            )
+
+        compositeDisposable.add(
+            getTeiGraduationStatus().subscribeOn(schedulerProvider.io())
+                .observeOn(schedulerProvider.ui())
+                .subscribe({ enrollments ->
+                    _graduatedSessions.postValue(enrollments.filter { it.status() == EnrollmentStatus.COMPLETED }.size)
+                    _ongoingSessions.postValue(enrollments.filter { it.status() == EnrollmentStatus.ACTIVE }.size)
+
+                }, Timber::e)
+        )
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
@@ -149,8 +202,8 @@ class TEIDataPresenter(
             val enrollment = d2.enrollment(enrollmentUid)
             val showButton =
                 enrollment != null &&
-                    !isGrouping && enrollment.status() == EnrollmentStatus.ACTIVE &&
-                    canAddNewEvents()
+                        !isGrouping && enrollment.status() == EnrollmentStatus.ACTIVE &&
+                        canAddNewEvents()
             _shouldDisplayEventCreationButton.postValue(showButton)
         }
     }
@@ -409,10 +462,10 @@ class TEIDataPresenter(
             .filter { !stagesToHide.contains(it.uid()) }
             .filter { stage ->
                 stage.repeatable() == true ||
-                    events.value?.none { event ->
-                        event.stage?.uid() == stage.uid() &&
-                            event.type == EventViewModelType.EVENT
-                    } == true
+                        events.value?.none { event ->
+                            event.stage?.uid() == stage.uid() &&
+                                    event.type == EventViewModelType.EVENT
+                        } == true
             }.sortedBy { stage -> stage.sortOrder() }
 
     fun checkOrgUnitCount(programUid: String, programStageUid: String) {
@@ -449,4 +502,95 @@ class TEIDataPresenter(
             }
         }
     }
+
+    fun createEnrollment(externalEnrollmentModel: ExternalEnrollmentModel) {
+        if (programUid == "NrZIZN0hVdM") {
+           getDreamsTeiWithoutClub()
+        } else {
+            compositeDisposable.add(
+                dashboardRepository.createExternalEnrollment(externalEnrollmentModel)
+                    .subscribeOn(schedulerProvider.io())
+                    .observeOn(schedulerProvider.ui())
+                    .subscribe(
+                        {
+                            view.openEnrollmentActivity(it)
+                        },
+                        Timber.Forest::d,
+                    )
+            )
+        }
+
+
+    }
+
+    fun hasRelationshipAccess(relationshipType: String) {
+        compositeDisposable.add(
+            dashboardRepository.hasRelationshipAccess(relationshipType)
+                .subscribeOn(schedulerProvider.io())
+                .observeOn(schedulerProvider.ui())
+                .subscribe(
+                    {
+                        _canCreateTei.postValue(it)
+                    },
+                    Timber.Forest::d,
+                )
+        )
+
+
+    }
+
+    private fun getTeiGraduationStatus(): Single<List<Enrollment>> {
+        return d2.enrollmentModule()
+            .enrollments()
+            .byProgram()
+            .eq(programUid)
+            .byTrackedEntityInstance()
+            .eq(teiUid)
+            .get()
+    }
+
+    fun addClubMembers(members: List<String>) {
+        teiDataRepository.addClubMembers(members).forEach {
+            compositeDisposable.add(
+                it.subscribeOn(schedulerProvider.io())
+                    .observeOn(schedulerProvider.ui())
+                    .subscribe(
+                        {
+                            view.refleshTeiRelationships()
+                            Timber.tag("SELECTED_TEI").d(it.toString())
+                        },
+                        Timber::d,
+                    )
+            )
+        }
+
+    }
+
+    fun getTeiRelationships() {
+        compositeDisposable.add(
+            teiDataRepository.getTeiRelationships().subscribeOn(schedulerProvider.io())
+                .observeOn(schedulerProvider.ui())
+                .subscribe(
+                    { membershipModel ->
+                        membershipModel?.let { rel -> _relationshipMemberModel.postValue(rel) }
+                    },
+                    Timber.Forest::d,
+                )
+        )
+    }
+
+    fun getDreamsTeiWithoutClub(){
+        compositeDisposable.add(
+            dashboardRepository.getTeiForDreams("mLQQMqFKrmv")
+                .subscribeOn(schedulerProvider.io())
+                .observeOn(schedulerProvider.ui())
+                .subscribe(
+                    {
+                        view.openAlertDialogForSelectingMembers(it)
+                    },
+                    Timber.Forest::d,
+                )
+        )
+    }
+
 }

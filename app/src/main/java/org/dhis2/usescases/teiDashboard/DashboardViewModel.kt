@@ -53,6 +53,7 @@ class DashboardViewModel(
     init {
         fetchDashboardModel()
         fetchGrouping()
+
     }
 
     private fun fetchDashboardModel() {
