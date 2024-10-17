@@ -16,10 +16,10 @@ import org.dhis2.form.model.EventMode
 import org.dhis2.ui.dialogs.bottomsheet.FieldWithIssue
 import org.dhis2.usescases.eventsWithoutRegistration.EventIdlingResourceSingleton
 import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.EventCaptureContract.EventCaptureRepository
-import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.autoenrollment.AutoEnrollmentManager
-import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.autoenrollment.model.ExternalEnrollmentCaptureModel
 import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.domain.ConfigureEventCompletionDialog
 import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.model.EventCaptureInitialInfo
+import org.dhis2.usescases.workflowredesign.WorkflowRedesignManager
+import org.dhis2.usescases.workflowredesign.model.ExternalEnrollmentCaptureModel
 import org.hisp.dhis.android.core.common.Unit
 import org.hisp.dhis.android.core.common.ValidationStrategy
 import org.hisp.dhis.android.core.event.EventStatus
@@ -33,7 +33,7 @@ class EventCapturePresenterImpl(
     private val schedulerProvider: SchedulerProvider,
     private val preferences: PreferenceProvider,
     private val configureEventCompletionDialog: ConfigureEventCompletionDialog,
-    private val autoEnrollmentManager: AutoEnrollmentManager
+    private val workflowRedesignManager: WorkflowRedesignManager
 ) : ViewModel(), EventCaptureContract.Presenter {
 
     var compositeDisposable: CompositeDisposable = CompositeDisposable()
@@ -145,9 +145,9 @@ class EventCapturePresenterImpl(
 
         compositeDisposable.add(
             Flowable.zip(
-                autoEnrollmentManager.getCurrentEventTrackedEntityInstance(eventUid),
-                autoEnrollmentManager.getCurrentEventDataValues(eventUid),
-                autoEnrollmentManager.getAutoEnrollmentConfiguration(),
+                workflowRedesignManager.getCurrentEventTrackedEntityInstance(eventUid),
+                workflowRedesignManager.getCurrentEventDataValues(eventUid),
+                workflowRedesignManager.getAutoEnrollmentConfiguration(),
                 eventCaptureRepository.orgUnit(),
                 ::ExternalEnrollmentCaptureModel
             ).defaultSubscribe(schedulerProvider, { external ->
@@ -156,10 +156,6 @@ class EventCapturePresenterImpl(
                 val targetPrograms = external.configs.configurations.autoEnrollments.targetPrograms
                 val userOrgUnit = external.orgUnit.uid()
 
-
-
-
-
                 targetPrograms.forEach { targetItem ->
                     currentEventDataValues
                         .any {
@@ -167,7 +163,7 @@ class EventCapturePresenterImpl(
                                 .any { te -> te.id == it.dataElement() && te.requiredValue == it.value() }
                         }.let {
                             if (it) {
-                                autoEnrollmentManager.createEnrollments(
+                                workflowRedesignManager.createEnrollments(
                                     targetItem.ids,
                                     teiUid,
                                     userOrgUnit
