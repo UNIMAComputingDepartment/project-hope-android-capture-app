@@ -7,6 +7,8 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,11 +19,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
 import androidx.compose.material.ContentAlpha
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
@@ -37,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -48,13 +55,17 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.commit
 import org.dhis2.R
 import org.dhis2.commons.data.EventCreationType
+import org.dhis2.commons.resources.ColorType
+import org.dhis2.commons.resources.ColorUtils
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.TEIDataFragment
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.MembershipModel
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.MembershipProgramMapperModel
 import org.dhis2.usescases.teiDashboard.ui.model.InfoBarUiModel
 import org.dhis2.usescases.teiDashboard.ui.model.TeiCardUiModel
 import org.dhis2.usescases.teiDashboard.ui.model.TimelineEventsHeaderModel
+import org.dhis2.usescases.venoapp.CreateBiometryActivity
 import org.hisp.dhis.android.core.enrollment.EnrollmentStatus
+import org.hisp.dhis.mobile.ui.designsystem.component.Button
 import org.hisp.dhis.mobile.ui.designsystem.component.CardDetail
 import org.hisp.dhis.mobile.ui.designsystem.component.InfoBar
 import org.hisp.dhis.mobile.ui.designsystem.component.InfoBarData
@@ -75,7 +86,8 @@ fun TeiDetailDashboard(
     onCreateMemberClick: () -> Unit = {},
     canCreateTeiRelationship: Boolean = false,
     graduatedSessions: Int = 0,
-    onGoingSessions: Int = 0
+    onGoingSessions: Int = 0,
+    onCreateBiometryClicked: () -> Unit={}
 ) {
 
 
@@ -150,11 +162,17 @@ fun TeiDetailDashboard(
             )
         }
 
+        //TODO: here involked function
+        CreateBiometryButton(onCreateBiometryClicked=onCreateBiometryClicked)
+
         if (currentProgramId == "JuDBc7Wx3wG") {
             GraduationStatusView(
                 completedEnrollments = graduatedSessions,
-                activeEnrollments = onGoingSessions)
+                activeEnrollments = onGoingSessions
+            )
         }
+
+
 
 
         relationshipMembers?.let {
@@ -459,5 +477,36 @@ fun GraduationStatusView(completedEnrollments: Int = 0, activeEnrollments: Int =
                 fontSize = 16.sp
             )
         }
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
+fun CreateBiometryButton(onCreateBiometryClicked: () -> Unit = {}) {
+    OutlinedButton(
+        onClick = {
+            onCreateBiometryClicked()
+        },
+        modifier = Modifier.padding(Spacing.Spacing16).fillMaxWidth(),
+        border = BorderStroke(
+            1.dp,
+            color = Color(
+                ColorUtils().getPrimaryColor(
+                    LocalContext.current,
+                    ColorType.PRIMARY,
+                ),
+            )
+        ),
+        shape = RoundedCornerShape(50), // = 50% percent
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = Color(
+                ColorUtils().getPrimaryColor(
+                    LocalContext.current,
+                    ColorType.PRIMARY,
+                )
+            )
+        )
+    ) {
+        Text(text = "Create biometry", fontSize = 12.sp)
     }
 }

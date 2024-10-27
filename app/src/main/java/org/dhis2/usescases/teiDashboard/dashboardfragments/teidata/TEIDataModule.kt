@@ -41,6 +41,7 @@ class TEIDataModule(
     private val enrollmentUid: String,
     private val registry: ActivityResultRegistry,
 ) {
+    //TODO: hilt inject venno app utils here
     @Provides
     @PerFragment
     fun providesPresenter(
@@ -58,6 +59,7 @@ class TEIDataModule(
         dispatcherProvider: DispatcherProvider,
         createEventUseCase: CreateEventUseCase,
         d2ErrorUtils: D2ErrorUtils,
+
     ): TEIDataPresenter {
         return TEIDataPresenter(
             view,

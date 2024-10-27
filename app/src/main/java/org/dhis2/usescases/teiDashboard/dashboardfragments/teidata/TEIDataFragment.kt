@@ -269,6 +269,7 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
                 )
             }
 
+
             TeiDetailDashboard(
                 syncData = syncInfoBar,
                 followUpData = followUpInfoBar,
@@ -290,7 +291,9 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
                 },
                 canCreateTeiRelationship = canCreateRelationship!!,
                 graduatedSessions = graduatedSessions!!,
-                onGoingSessions = onGoingSessions!!
+                onGoingSessions = onGoingSessions!!,
+                //TODO : Inject tei presenter that calls request pseudon
+//                onCreateBiometryClicked = presenter.
             )
         }
     }
