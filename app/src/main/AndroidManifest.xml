@@ -21,6 +21,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="com.globalid.venoapp.permission.BIND_PSEUDONYM_SERVICE" />
 
     <uses-feature
         android:name="android.hardware.sensor.accelerometer"
@@ -37,6 +38,14 @@
                 android:scheme="smsto" />
         </intent>
 
+    </queries>
+
+    <queries>
+        <package android:name="com.globalid.venoapp" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application

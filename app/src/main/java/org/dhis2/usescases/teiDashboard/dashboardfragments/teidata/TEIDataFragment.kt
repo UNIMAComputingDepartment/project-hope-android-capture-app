@@ -293,7 +293,9 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
                 graduatedSessions = graduatedSessions!!,
                 onGoingSessions = onGoingSessions!!,
                 //TODO : Inject tei presenter that calls request pseudon
-//                onCreateBiometryClicked = presenter.
+                onCreateBiometryClicked = {
+                    presenter.onCreateBiometryClicked(requireContext())
+                }
             )
         }
     }

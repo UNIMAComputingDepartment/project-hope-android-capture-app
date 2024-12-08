@@ -1,11 +1,11 @@
 // IPseudonymService.aidl
-package org.dhis2;
+package com.globalid.venoapp;
 
 // Declare any non-default types here with import statements
 
-import org.dhis2.IPseudonymGenerationCallback;
-import org.dhis2.IPseudonymDeleteCallback;
-import org.dhis2.IPseudoAssociatedCallback;
+import com.globalid.venoapp.IPseudonymGenerationCallback;
+import com.globalid.venoapp.IPseudonymDeleteCallback;
+import com.globalid.venoapp.IPseudoAssociatedCallback;
 
 interface IPseudonymService {
 

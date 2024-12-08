@@ -13,18 +13,18 @@ import androidx.compose.runtime.Composable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.dhis2.IPseudoAssociatedCallback
-import org.dhis2.IPseudonymDeleteCallback
-import org.dhis2.IPseudonymGenerationCallback
-import org.dhis2.IPseudonymService
+import com.globalid.venoapp.IPseudoAssociatedCallback
+import com.globalid.venoapp.IPseudonymDeleteCallback
+import com.globalid.venoapp.IPseudonymGenerationCallback
+import com.globalid.venoapp.IPseudonymService
 import timber.log.Timber
 
-const val packageName = "com.example.venoapp"
+const val packageName = "com.globalid.venoapp"
 private const val SERVICE_CLASS_NAME = "$packageName.PseudonymService"
-const val createBiometryActivityName = "com.example.venoapp.activities.CreateBiometryActivity"
-const val updateBiometryActivityName = "com.example.venoapp.activities.UpdateBiometryActivity"
+const val createBiometryActivityName = "com.globalid.venoapp.activities.CreateBiometryActivity"
+const val updateBiometryActivityName = "com.globalid.venoapp.activities.UpdateBiometryActivity"
 const val authenticateBiometryActivityName =
-    "com.example.venoapp.activities.AuthenticateBiometryActivity"
+    "com.globalid.venoapp.activities.AuthenticateBiometryActivity"
 
 private var pseudonymService: IPseudonymService? = null
 private var serviceConnection: ServiceConnection? = null

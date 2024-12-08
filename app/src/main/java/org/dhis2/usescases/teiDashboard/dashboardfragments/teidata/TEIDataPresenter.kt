@@ -1,9 +1,9 @@
 package org.dhis2.usescases.teiDashboard.dashboardfragments.teidata
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.annotation.VisibleForTesting
 import androidx.core.app.ActivityOptionsCompat
 import androidx.lifecycle.LiveData
@@ -33,6 +33,7 @@ import org.dhis2.form.data.OptionsRepository
 import org.dhis2.form.data.RulesUtilsProviderImpl
 import org.dhis2.form.model.EventMode
 import org.dhis2.mobileProgramRules.RuleEngineHelper
+import org.dhis2.usescases.venoapp.VenoAppService
 import org.dhis2.usescases.events.ScheduledEventActivity.Companion.getIntent
 import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.EventCaptureActivity
 import org.dhis2.usescases.eventsWithoutRegistration.eventCapture.EventCaptureActivity.Companion.getActivityBundle
@@ -42,7 +43,6 @@ import org.dhis2.usescases.programStageSelection.ProgramStageSelectionActivity
 import org.dhis2.usescases.teiDashboard.DashboardRepository
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.TeiDataIdlingResourceSingleton.decrement
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.TeiDataIdlingResourceSingleton.increment
-import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.DreamsTeiModel
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.ExternalEnrollmentModel
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.MembershipProgramMapperModel
 import org.dhis2.usescases.teiDashboard.domain.GetNewEventCreationTypeOptions
@@ -80,7 +80,7 @@ class TEIDataPresenter(
     private val createEventUseCase: CreateEventUseCase,
     private val d2ErrorUtils: D2ErrorUtils,
     //TODO: Inject venno app functions
-//    private val vennoAppRepo: VennoAppRepositoy
+    private val venoAppService: VenoAppService
 ) {
     private val groupingProcessor: BehaviorProcessor<Boolean> = BehaviorProcessor.create()
     private val compositeDisposable: CompositeDisposable = CompositeDisposable()
@@ -592,6 +592,19 @@ class TEIDataPresenter(
                     },
                     Timber.Forest::d,
                 )
+        )
+    }
+
+    fun onCreateBiometryClicked(context: Context) {
+        venoAppService.requestPseudonym(
+            view.context,
+            onPseudonymReceived = {
+                Timber.d("Pseudonym received $it")
+                venoAppService.createBiometryActivity(context, it) {}
+            },
+            onGenerationError = {
+                Timber.e("Error while generating pseudonym", it)
+            }
         )
     }
 

@@ -21,6 +21,8 @@ import org.dhis2.data.forms.dataentry.SearchTEIRepositoryImpl
 import org.dhis2.form.data.FormValueStore
 import org.dhis2.form.data.OptionsRepository
 import org.dhis2.mobileProgramRules.RuleEngineHelper
+import org.dhis2.usescases.venoapp.VenoAppService
+import org.dhis2.usescases.venoapp.VenoAppServiceImpl
 import org.dhis2.usescases.workflowredesign.WorkflowRedesignManager
 import org.dhis2.usescases.workflowredesign.WorkflowRedesignManagerImpl
 import org.dhis2.usescases.programEventDetail.usecase.CreateEventUseCase
@@ -59,6 +61,7 @@ class TEIDataModule(
         dispatcherProvider: DispatcherProvider,
         createEventUseCase: CreateEventUseCase,
         d2ErrorUtils: D2ErrorUtils,
+        venoAppService: VenoAppService
 
     ): TEIDataPresenter {
         return TEIDataPresenter(
@@ -80,6 +83,7 @@ class TEIDataModule(
             dispatcherProvider,
             createEventUseCase,
             d2ErrorUtils,
+            venoAppService
         )
     }
 
@@ -195,5 +199,11 @@ class TEIDataModule(
     @PerFragment
     fun providesWorkFlowRedesignManager(d2: D2): WorkflowRedesignManager {
       return WorkflowRedesignManagerImpl(d2)
+    }
+
+    @Provides
+    @PerFragment
+    fun providesVenoAppService(): VenoAppService {
+        return VenoAppServiceImpl()
     }
 }

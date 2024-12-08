@@ -1,5 +1,5 @@
 // IPseudoAssociatedCallback.aidl
-package org.dhis2;
+package com.globalid.venoapp;
 
 // Declare any non-default types here with import statements
 
