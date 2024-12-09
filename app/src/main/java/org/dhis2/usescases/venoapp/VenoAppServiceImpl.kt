@@ -203,10 +203,8 @@ class VenoAppServiceImpl : VenoAppService {
                     }
                 })
             } catch (e: RemoteException) {
-                Log.e(
-                    "VenoAppBinderService",
-                    "Error checking associated pseudonym: ${e.message}"
-                )
+                Timber.tag("VenoAppBinderService")
+                    .e("Error checking associated pseudonym: %s", e.message)
                 Toast.makeText(
                     context,
                     "Error checking pseudonym association",

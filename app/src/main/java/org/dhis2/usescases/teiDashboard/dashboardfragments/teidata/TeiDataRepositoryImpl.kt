@@ -2,6 +2,7 @@ package org.dhis2.usescases.teiDashboard.dashboardfragments.teidata
 
 import io.reactivex.Flowable
 import io.reactivex.Single
+import okhttp3.internal.wait
 import org.dhis2.bindings.profilePicturePath
 import org.dhis2.bindings.userFriendlyValue
 import org.dhis2.commons.bindings.enrollmentInProgram
@@ -27,12 +28,14 @@ import org.hisp.dhis.android.core.enrollment.EnrollmentStatus
 import org.hisp.dhis.android.core.event.Event
 import org.hisp.dhis.android.core.event.EventCollectionRepository
 import org.hisp.dhis.android.core.event.EventStatus
+import org.hisp.dhis.android.core.maintenance.D2Error
 import org.hisp.dhis.android.core.organisationunit.OrganisationUnit
 import org.hisp.dhis.android.core.period.PeriodType
 import org.hisp.dhis.android.core.program.Program
 import org.hisp.dhis.android.core.relationship.RelationshipHelper
 import org.hisp.dhis.android.core.relationship.RelationshipItem
 import org.hisp.dhis.android.core.relationship.RelationshipItemTrackedEntityInstance
+import org.hisp.dhis.android.core.trackedentity.TrackedEntityAttributeValue
 import org.hisp.dhis.android.core.trackedentity.TrackedEntityInstance
 import org.hisp.dhis.mobile.ui.designsystem.theme.SurfaceColor
 import timber.log.Timber
@@ -592,4 +595,36 @@ class TeiDataRepositoryImpl(
         return addedMembers
     }
 
+    override fun getVenoAppPseudonym(): Single<String> {
+        val pseudonymAttributeUid = "oY8XQBydI7l"
+
+        return d2.trackedEntityModule().trackedEntityAttributeValues()
+            .value(pseudonymAttributeUid, teiUid)
+            .get().map { it.value() }
+    }
+
+
+    override fun saveVenoAppPseudonym(pseudonym: String): Single<Boolean> {
+        val pseudonymAttributeUid = "oY8XQBydI7l"
+
+        return Single.create { emitter ->
+            try {
+                val attrValueRepository = d2.trackedEntityModule()
+                    .trackedEntityAttributeValues()
+                    .value(pseudonymAttributeUid, teiUid)
+
+                attrValueRepository.set(pseudonym).blockingAwait()
+                Timber.d("Pseudonym Saved: $pseudonym")
+                emitter.onSuccess(true)
+            } catch (ex: Exception) {
+                // Log detailed error information
+                if (ex is D2Error) {
+                    Timber.e(ex, "D2Error occurred: ${ex.message}")
+                } else {
+                    Timber.e(ex, "Exception occurred while saving pseudonym")
+                }
+                emitter.onSuccess(false)
+            }
+        }
+    }
 }

@@ -269,32 +269,39 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
                 )
             }
 
+            val pseudonym = presenter.pseudonym.observeAsState()
 
             TeiDetailDashboard(
                 syncData = syncInfoBar,
                 followUpData = followUpInfoBar,
                 enrollmentData = enrollmentInfoBar,
                 card = card,
-                isGrouped = groupingEvents ?: true,
                 timelineEventHeaderModel = TimelineEventsHeaderModel(
                     displayEventCreationButton,
                     eventCount,
                     presenter.getNewEventOptionsByStages(null),
                 ),
+                isGrouped = groupingEvents ?: true,
                 timelineOnEventCreationOptionSelected = {
                     presenter.onAddNewEventOptionSelected(it, null)
                 },
-                currentProgramId = currentProgramId,
                 relationshipMembers = relationShipMembers,
+                currentProgramId = currentProgramId,
                 onCreateMemberClick = {
                     model?.let { presenter.createEnrollment(it) }
                 },
                 canCreateTeiRelationship = canCreateRelationship!!,
                 graduatedSessions = graduatedSessions!!,
                 onGoingSessions = onGoingSessions!!,
-                //TODO : Inject tei presenter that calls request pseudon
                 onCreateBiometryClicked = {
-                    presenter.onCreateBiometryClicked(requireContext())
+                    presenter.onCreateBiometryClicked()
+                },
+                onAuthenticateWithBiometryClicked = {
+                    presenter.onAuthenticateWithBiometryClicked()
+                },
+                pseudonym = pseudonym,
+                onUpdateBiometryClicked = {
+                    presenter.onUpdateBiometryClicked()
                 }
             )
         }

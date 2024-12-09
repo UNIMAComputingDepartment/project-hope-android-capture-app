@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.annotation.VisibleForTesting
 import androidx.core.app.ActivityOptionsCompat
 import androidx.lifecycle.LiveData
@@ -115,6 +116,9 @@ class TEIDataPresenter(
     private val _graduatedSessions: MutableLiveData<Int> = MutableLiveData(0)
     val graduatedSessions: MutableLiveData<Int> = _graduatedSessions
 
+    private val _pseudonym: MutableLiveData<String> = MutableLiveData("")
+    val pseudonym: LiveData<String> = _pseudonym
+
     fun init() {
         programUid?.let {
             _currentProgramId.postValue(it)
@@ -195,6 +199,8 @@ class TEIDataPresenter(
 
                 }, Timber::e)
         )
+
+        getVenoAppPseudonym()
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
@@ -595,17 +601,61 @@ class TEIDataPresenter(
         )
     }
 
-    fun onCreateBiometryClicked(context: Context) {
+    private fun getVenoAppPseudonym() {
+        compositeDisposable.add(
+            teiDataRepository.getVenoAppPseudonym().subscribeOn(schedulerProvider.io())
+                .observeOn(schedulerProvider.ui())
+                .subscribe({
+                    _pseudonym.postValue(it)
+                }, Timber::e)
+        )
+    }
+
+    fun onCreateBiometryClicked() {
+        // The onPseudonymReceived was being recalled after registration
+        // This variable is to track if its being recalled
+        var pseudonymCaptured = false
         venoAppService.requestPseudonym(
             view.context,
             onPseudonymReceived = {
                 Timber.d("Pseudonym received $it")
-                venoAppService.createBiometryActivity(context, it) {}
+
+                if (!pseudonymCaptured) {
+                    compositeDisposable.add(
+                        teiDataRepository.saveVenoAppPseudonym(it).subscribeOn(schedulerProvider.io())
+                            .observeOn(schedulerProvider.ui())
+                            .subscribe({ r ->
+                                if (r) {
+                                    pseudonymCaptured = true
+                                    getVenoAppPseudonym()
+                                    venoAppService.createBiometryActivity(view.context, it) {
+                                        //Timber.d("Biometry Creation Completed")
+                                        //view.displayMessage("Biometry created successfully")
+                                    }
+                                } else {
+                                    Toast.makeText(view.context, "Failed to save pseudonym", Toast.LENGTH_LONG).show()
+                                }
+                            }, Timber::e)
+                    )
+                }
+
             },
             onGenerationError = {
                 Timber.e("Error while generating pseudonym", it)
             }
         )
+    }
+
+    fun onAuthenticateWithBiometryClicked() {
+        venoAppService.authenticateBiometryActivity(view.context, _pseudonym.value!!) {
+                Timber.d("Authentication Completed")
+        }
+    }
+
+    fun onUpdateBiometryClicked() {
+        venoAppService.updateBiometryActivity(view.context, _pseudonym.value!!) {
+            Timber.d("Biometry Update Completed")
+        }
     }
 
 }

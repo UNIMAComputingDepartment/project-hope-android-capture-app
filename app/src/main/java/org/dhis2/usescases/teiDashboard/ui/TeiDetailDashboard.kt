@@ -8,7 +8,6 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
 import androidx.compose.material.ContentAlpha
@@ -29,11 +27,12 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ComposeCompilerApi
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -52,20 +50,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.fragment.app.commit
 import org.dhis2.R
 import org.dhis2.commons.data.EventCreationType
 import org.dhis2.commons.resources.ColorType
 import org.dhis2.commons.resources.ColorUtils
-import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.TEIDataFragment
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.MembershipModel
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.MembershipProgramMapperModel
 import org.dhis2.usescases.teiDashboard.ui.model.InfoBarUiModel
 import org.dhis2.usescases.teiDashboard.ui.model.TeiCardUiModel
 import org.dhis2.usescases.teiDashboard.ui.model.TimelineEventsHeaderModel
-import org.dhis2.usescases.venoapp.CreateBiometryActivity
 import org.hisp.dhis.android.core.enrollment.EnrollmentStatus
-import org.hisp.dhis.mobile.ui.designsystem.component.Button
 import org.hisp.dhis.mobile.ui.designsystem.component.CardDetail
 import org.hisp.dhis.mobile.ui.designsystem.component.InfoBar
 import org.hisp.dhis.mobile.ui.designsystem.component.InfoBarData
@@ -87,10 +81,11 @@ fun TeiDetailDashboard(
     canCreateTeiRelationship: Boolean = false,
     graduatedSessions: Int = 0,
     onGoingSessions: Int = 0,
-    onCreateBiometryClicked: () -> Unit={}
+    onCreateBiometryClicked: () -> Unit = {},
+    onAuthenticateWithBiometryClicked: () -> Unit,
+    pseudonym: State<String?>,
+    onUpdateBiometryClicked: () -> Unit
 ) {
-
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -162,8 +157,11 @@ fun TeiDetailDashboard(
             )
         }
 
-        //TODO: here involked function
-        CreateBiometryButton(onCreateBiometryClicked=onCreateBiometryClicked)
+        if (pseudonym.value.isNullOrEmpty()) {
+            CreateBiometryButton(onCreateBiometryClicked =onCreateBiometryClicked)
+        } else {
+            BiometryAuthButton(onAuthenticateWithBiometryClicked = onAuthenticateWithBiometryClicked, onUpdateBiometryClicked=onUpdateBiometryClicked)
+        }
 
         if (currentProgramId == "JuDBc7Wx3wG") {
             GraduationStatusView(
@@ -217,13 +215,15 @@ fun MemberShipContent(
 
     Column {
         Card(
-            modifier = modifier.animateContentSize(
-                animationSpec = tween(
-                    durationMillis = 300,
-                    easing = LinearOutSlowInEasing
-                )
+            modifier = modifier
+                .animateContentSize(
+                    animationSpec = tween(
+                        durationMillis = 300,
+                        easing = LinearOutSlowInEasing
+                    )
 
-            ).padding(start = Spacing.Spacing16, end = Spacing.Spacing16)
+                )
+                .padding(start = Spacing.Spacing16, end = Spacing.Spacing16)
                 .clickable { isExpanded = !isExpanded }
         ) {
             Row(
@@ -242,7 +242,8 @@ fun MemberShipContent(
                     Spacer(modifier = Modifier.padding(Spacing.Spacing4))
                     Text(members.relationshipDescription, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.padding(start = Spacing.Spacing8))
-                    IconButton(modifier = Modifier.alpha(ContentAlpha.medium)
+                    IconButton(modifier = Modifier
+                        .alpha(ContentAlpha.medium)
                         .rotate(rotationState),
                         onClick = {
                             isExpanded = !isExpanded
@@ -309,19 +310,22 @@ fun MembershipContentItem(
 
     val activity = LocalContext.current as? AppCompatActivity ?: return
     Row(
-        modifier = Modifier.fillMaxWidth().padding(
-            start = Spacing.Spacing16,
-            end = Spacing.Spacing16,
-            top = Spacing.Spacing8,
-            bottom = Spacing.Spacing8
-        ).clickable {
-            val intent = Intent(currentContext, activity::class.java).apply {
-                putExtra("PROGRAM_UID", member.programUid)
-                putExtra("TEI_UID", member.teiId)
-                putExtra("ENROLLMENT_UID", member.enrollmentId)
-            }
-            currentContext.startActivity(intent)
-        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = Spacing.Spacing16,
+                end = Spacing.Spacing16,
+                top = Spacing.Spacing8,
+                bottom = Spacing.Spacing8
+            )
+            .clickable {
+                val intent = Intent(currentContext, activity::class.java).apply {
+                    putExtra("PROGRAM_UID", member.programUid)
+                    putExtra("TEI_UID", member.teiId)
+                    putExtra("ENROLLMENT_UID", member.enrollmentId)
+                }
+                currentContext.startActivity(intent)
+            },
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -337,7 +341,9 @@ fun MembershipContentItem(
                 )
                 Text(member.secondaryAttribute, fontSize = 10.sp)
             }
-            Divider(modifier = Modifier.width(1.dp).height(10.dp))
+            Divider(modifier = Modifier
+                .width(1.dp)
+                .height(10.dp))
             Column(modifier = Modifier.padding(Spacing.Spacing4)) {
                 Text(text = member.primaryAttribute, fontSize = 18.sp)
                 Text(member.tertiaryAttribute, fontSize = 12.sp)
@@ -444,7 +450,9 @@ fun GraduationStatusView(completedEnrollments: Int = 0, activeEnrollments: Int =
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier.fillMaxWidth().padding(Spacing.Spacing16)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(Spacing.Spacing16)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -482,12 +490,16 @@ fun GraduationStatusView(completedEnrollments: Int = 0, activeEnrollments: Int =
 
 @Composable
 @Preview(showBackground = true)
-fun CreateBiometryButton(onCreateBiometryClicked: () -> Unit = {}) {
+fun CreateBiometryButton(
+    onCreateBiometryClicked: () -> Unit = {},
+) {
     OutlinedButton(
         onClick = {
             onCreateBiometryClicked()
         },
-        modifier = Modifier.padding(Spacing.Spacing16).fillMaxWidth(),
+        modifier = Modifier
+            .padding(Spacing.Spacing16)
+            .fillMaxWidth(),
         border = BorderStroke(
             1.dp,
             color = Color(
@@ -508,5 +520,48 @@ fun CreateBiometryButton(onCreateBiometryClicked: () -> Unit = {}) {
         )
     ) {
         Text(text = "Create biometry", fontSize = 12.sp)
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
+fun BiometryAuthButton(
+    onUpdateBiometryClicked: () -> Unit = {},
+    onAuthenticateWithBiometryClicked: () -> Unit = {}
+) {
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedButton(
+            onClick = {
+                onAuthenticateWithBiometryClicked()
+            },
+            modifier = Modifier.padding(Spacing.Spacing16).fillMaxWidth(0.5F),
+            shape = RoundedCornerShape(50), // = 50% percent
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = Color(ColorUtils().getPrimaryColor(
+                    LocalContext.current,
+                    ColorType.PRIMARY,
+                )),
+                contentColor = Color.White
+            )
+        ) {
+            Text(text = "Authenticate", fontSize = 12.sp)
+        }
+
+        TextButton(
+            onClick = {
+                onUpdateBiometryClicked()
+            },
+            modifier = Modifier.padding(Spacing.Spacing16),
+
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = Color(0xFFFFA500)
+            )
+        ) {
+            Text(text = "Update Biometry", fontSize = 12.sp)
+        }
     }
 }

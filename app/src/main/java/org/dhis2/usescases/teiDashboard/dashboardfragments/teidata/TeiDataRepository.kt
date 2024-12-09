@@ -38,4 +38,7 @@ interface TeiDataRepository {
     fun getCurrentOrgUnit(enrollmentOrgUnit: String): Single<String>
 
     fun addClubMembers(members:List<String>): List<Flowable<String>>
+
+    fun saveVenoAppPseudonym(pseudonym: String): Single<Boolean>
+    fun getVenoAppPseudonym(): Single<String>
 }
