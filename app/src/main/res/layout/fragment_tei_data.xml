@@ -95,6 +95,21 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/cardLayout" />
 
+                <TextView
+                    android:id="@+id/not_authenticated"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@color/white"
+                    android:gravity="center"
+                    android:padding="42dp"
+                    android:text="@string/the_client_is_not_authenticated"
+                    android:textSize="@dimen/primaryTextSize"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/cardLayout" />
+
                 <include
                     android:id="@+id/loading_progress"
                     layout="@layout/progress_layout"

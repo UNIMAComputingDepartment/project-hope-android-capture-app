@@ -84,7 +84,8 @@ fun TeiDetailDashboard(
     onCreateBiometryClicked: () -> Unit = {},
     onAuthenticateWithBiometryClicked: () -> Unit,
     pseudonym: State<String?>,
-    onUpdateBiometryClicked: () -> Unit
+    onUpdateBiometryClicked: () -> Unit,
+    isInSession: Boolean,
 ) {
     Column(
         modifier = Modifier
@@ -157,11 +158,13 @@ fun TeiDetailDashboard(
             )
         }
 
-        if (pseudonym.value.isNullOrEmpty()) {
-            CreateBiometryButton(onCreateBiometryClicked =onCreateBiometryClicked)
-        } else {
-            BiometryAuthButton(onAuthenticateWithBiometryClicked = onAuthenticateWithBiometryClicked, onUpdateBiometryClicked=onUpdateBiometryClicked)
-        }
+        BiometryAuthButton(
+            hasPseudonym = !pseudonym.value.isNullOrEmpty(),
+            isAuthenticated = isInSession,
+            onCreateBiometryClicked = onCreateBiometryClicked,
+            onAuthenticateWithBiometryClicked = onAuthenticateWithBiometryClicked,
+            onUpdateBiometryClicked = onUpdateBiometryClicked
+        )
 
         if (currentProgramId == "JuDBc7Wx3wG") {
             GraduationStatusView(
@@ -169,9 +172,6 @@ fun TeiDetailDashboard(
                 activeEnrollments = onGoingSessions
             )
         }
-
-
-
 
         relationshipMembers?.let {
             if (it.program == currentProgramId) {
@@ -534,22 +534,7 @@ fun BiometryAuthButton(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
     ) {
-        OutlinedButton(
-            onClick = {
-                onAuthenticateWithBiometryClicked()
-            },
-            modifier = Modifier.padding(Spacing.Spacing16).fillMaxWidth(0.5F),
-            shape = RoundedCornerShape(50), // = 50% percent
-            colors = ButtonDefaults.buttonColors(
-                backgroundColor = Color(ColorUtils().getPrimaryColor(
-                    LocalContext.current,
-                    ColorType.PRIMARY,
-                )),
-                contentColor = Color.White
-            )
-        ) {
-            Text(text = "Authenticate", fontSize = 12.sp)
-        }
+
 
         TextButton(
             onClick = {
@@ -562,6 +547,89 @@ fun BiometryAuthButton(
             )
         ) {
             Text(text = "Update Biometry", fontSize = 12.sp)
+        }
+    }
+}
+
+@Composable
+fun BiometryAuthButton(
+    hasPseudonym: Boolean,
+    isAuthenticated: Boolean,
+    onCreateBiometryClicked: () -> Unit,
+    onAuthenticateWithBiometryClicked: () -> Unit,
+    onUpdateBiometryClicked: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    when {
+        !hasPseudonym -> {
+            // Show "Create Biometry" button
+            OutlinedButton(
+                onClick = { onCreateBiometryClicked() },
+                modifier = modifier
+                    .padding(Spacing.Spacing16)
+                    .fillMaxWidth(),
+                border = BorderStroke(
+                    1.dp,
+                    color = Color(
+                        ColorUtils().getPrimaryColor(
+                            LocalContext.current,
+                            ColorType.PRIMARY,
+                        )
+                    )
+                ),
+                shape = RoundedCornerShape(50), // Rounded corners
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color(
+                        ColorUtils().getPrimaryColor(
+                            LocalContext.current,
+                            ColorType.PRIMARY,
+                        )
+                    )
+                )
+            ) {
+                Text(text = "Create Biometry", fontSize = 12.sp)
+            }
+        }
+        hasPseudonym && !isAuthenticated -> {
+            OutlinedButton(
+                onClick = {
+                    onAuthenticateWithBiometryClicked()
+                },
+                modifier = Modifier
+                    .padding(Spacing.Spacing16)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(50), // = 50% percent
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color(ColorUtils().getPrimaryColor(
+                        LocalContext.current,
+                        ColorType.PRIMARY,
+                    )),
+                    contentColor = Color.White
+                )
+            ) {
+                Text(text = "Authenticate", fontSize = 12.sp)
+            }
+        }
+        hasPseudonym && isAuthenticated -> {
+            TextButton(
+                onClick = {
+                    onUpdateBiometryClicked()
+                },
+                modifier = Modifier
+                    .padding(Spacing.Spacing16)
+                    .fillMaxWidth(),
+
+                border = BorderStroke(
+                    1.dp,
+                    color = Color(0xFFFFA500)
+                ),
+                shape = RoundedCornerShape(50), // Rounded corners
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color(0xFFFFA500)
+                )
+            ) {
+                Text(text = "Update Biometry", fontSize = 12.sp)
+            }
         }
     }
 }

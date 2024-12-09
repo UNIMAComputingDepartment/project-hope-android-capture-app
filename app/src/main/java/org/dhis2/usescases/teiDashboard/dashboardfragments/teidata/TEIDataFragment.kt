@@ -175,10 +175,27 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
             }
 
             presenter.events.observe(viewLifecycleOwner) {
-                setEvents(it)
+                if (presenter.isInSession.value == true) {
+                    setEvents(it)
+                }
                 showLoadingProgress(false)
             }
         }.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        presenter.session.observe(viewLifecycleOwner) {
+            presenter.onSessionUpdated()
+            if (presenter.isInSession.value != true) {
+                binding.teiRecycler.visibility = View.GONE
+                binding.notAuthenticated?.visibility = View.VISIBLE
+                Timber.d("No session, Hiding Stages")
+            } else {
+                binding.teiRecycler.visibility = View.VISIBLE
+                binding.notAuthenticated?.visibility = View.GONE
+            }
+        }
     }
 
     private fun showDetailCard() {
@@ -270,6 +287,7 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
             }
 
             val pseudonym = presenter.pseudonym.observeAsState()
+            val isInSession = presenter.isInSession.observeAsState()
 
             TeiDetailDashboard(
                 syncData = syncInfoBar,
@@ -302,7 +320,8 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
                 pseudonym = pseudonym,
                 onUpdateBiometryClicked = {
                     presenter.onUpdateBiometryClicked()
-                }
+                },
+                isInSession = isInSession.value!!
             )
         }
     }
@@ -412,6 +431,7 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
         if (events.isEmpty()) {
             binding.emptyTeis.visibility = View.VISIBLE
             binding.teiRecycler.visibility = View.GONE
+            binding.notAuthenticated?.visibility = View.GONE
 
             if (presenter.shouldDisplayEventCreationButton.value == true) {
                 binding.emptyTeis.setText(R.string.empty_tei_add)
@@ -421,6 +441,7 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
         } else {
             binding.emptyTeis.visibility = View.GONE
             binding.teiRecycler.visibility = View.VISIBLE
+            binding.notAuthenticated?.visibility = View.GONE
 
             eventAdapter?.submitList(events)
             for (eventViewModel in events) {

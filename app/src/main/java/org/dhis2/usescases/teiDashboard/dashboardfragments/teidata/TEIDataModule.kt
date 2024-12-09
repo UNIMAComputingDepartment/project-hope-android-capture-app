@@ -32,6 +32,7 @@ import org.dhis2.usescases.teiDashboard.data.ProgramConfigurationRepository
 import org.dhis2.usescases.teiDashboard.domain.GetNewEventCreationTypeOptions
 import org.dhis2.usescases.teiDashboard.ui.mapper.InfoBarMapper
 import org.dhis2.usescases.teiDashboard.ui.mapper.TeiDashboardCardMapper
+import org.dhis2.usescases.workflowredesign.SessionManager
 import org.dhis2.utils.analytics.AnalyticsHelper
 import org.hisp.dhis.android.core.D2
 
@@ -43,7 +44,7 @@ class TEIDataModule(
     private val enrollmentUid: String,
     private val registry: ActivityResultRegistry,
 ) {
-    //TODO: hilt inject venno app utils here
+
     @Provides
     @PerFragment
     fun providesPresenter(
@@ -61,8 +62,8 @@ class TEIDataModule(
         dispatcherProvider: DispatcherProvider,
         createEventUseCase: CreateEventUseCase,
         d2ErrorUtils: D2ErrorUtils,
-        venoAppService: VenoAppService
-
+        venoAppService: VenoAppService,
+        sessionManager: SessionManager
     ): TEIDataPresenter {
         return TEIDataPresenter(
             view,
@@ -83,7 +84,8 @@ class TEIDataModule(
             dispatcherProvider,
             createEventUseCase,
             d2ErrorUtils,
-            venoAppService
+            venoAppService,
+            sessionManager
         )
     }
 

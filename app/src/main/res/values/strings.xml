@@ -980,4 +980,5 @@
     <string name="delete_relationship_dialog_message">%s will be removed from %s %s</string>
     <string name="delete_relationship_dialog_title_this">Remove %s from this %s</string>
     <string name="delete_relationship_dialog_message_this">%s will be removed from this %s</string>
+    <string name="the_client_is_not_authenticated">The client is not authenticated.</string>
 </resources>

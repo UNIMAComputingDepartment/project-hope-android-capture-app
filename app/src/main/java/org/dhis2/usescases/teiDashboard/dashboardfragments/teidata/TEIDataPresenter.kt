@@ -1,6 +1,5 @@
 package org.dhis2.usescases.teiDashboard.dashboardfragments.teidata
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -48,6 +47,7 @@ import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.Externa
 import org.dhis2.usescases.teiDashboard.dashboardfragments.teidata.model.MembershipProgramMapperModel
 import org.dhis2.usescases.teiDashboard.domain.GetNewEventCreationTypeOptions
 import org.dhis2.usescases.teiDashboard.ui.EventCreationOptions
+import org.dhis2.usescases.workflowredesign.SessionManager
 import org.dhis2.utils.Result
 import org.dhis2.utils.analytics.AnalyticsHelper
 import org.dhis2.utils.analytics.CREATE_EVENT_TEI
@@ -80,8 +80,8 @@ class TEIDataPresenter(
     private val dispatcher: DispatcherProvider,
     private val createEventUseCase: CreateEventUseCase,
     private val d2ErrorUtils: D2ErrorUtils,
-    //TODO: Inject venno app functions
-    private val venoAppService: VenoAppService
+    private val venoAppService: VenoAppService,
+    private val sessionManager: SessionManager
 ) {
     private val groupingProcessor: BehaviorProcessor<Boolean> = BehaviorProcessor.create()
     private val compositeDisposable: CompositeDisposable = CompositeDisposable()
@@ -118,6 +118,10 @@ class TEIDataPresenter(
 
     private val _pseudonym: MutableLiveData<String> = MutableLiveData("")
     val pseudonym: LiveData<String> = _pseudonym
+
+    val session: LiveData<Pair<Boolean, String>> = sessionManager.session
+    private val _isInSession: MutableLiveData<Boolean> = MutableLiveData(false)
+    val isInSession: LiveData<Boolean> = _isInSession
 
     fun init() {
         programUid?.let {
@@ -629,8 +633,7 @@ class TEIDataPresenter(
                                     pseudonymCaptured = true
                                     getVenoAppPseudonym()
                                     venoAppService.createBiometryActivity(view.context, it) {
-                                        //Timber.d("Biometry Creation Completed")
-                                        //view.displayMessage("Biometry created successfully")
+                                        sessionManager.startSessionTimer(teiUid)
                                     }
                                 } else {
                                     Toast.makeText(view.context, "Failed to save pseudonym", Toast.LENGTH_LONG).show()
@@ -649,13 +652,20 @@ class TEIDataPresenter(
     fun onAuthenticateWithBiometryClicked() {
         venoAppService.authenticateBiometryActivity(view.context, _pseudonym.value!!) {
                 Timber.d("Authentication Completed")
+                sessionManager.startSessionTimer(teiUid)
         }
     }
 
     fun onUpdateBiometryClicked() {
         venoAppService.updateBiometryActivity(view.context, _pseudonym.value!!) {
             Timber.d("Biometry Update Completed")
+            sessionManager.startSessionTimer(teiUid)
         }
+    }
+
+    fun onSessionUpdated() {
+        _isInSession.value = teiUid == session.value?.second && session.value?.first == true
+        Timber.d("New Session value posted: ${_isInSession.value}")
     }
 
 }
