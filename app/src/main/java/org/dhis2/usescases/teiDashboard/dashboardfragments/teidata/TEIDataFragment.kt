@@ -175,27 +175,12 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
             }
 
             presenter.events.observe(viewLifecycleOwner) {
-                if (presenter.isInSession.value == true) {
+                if (presenter.isInSession.value == true || presenter.isRestrictedTei.value == false) {
                     setEvents(it)
                 }
                 showLoadingProgress(false)
             }
         }.root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        presenter.session.observe(viewLifecycleOwner) {
-            presenter.onSessionUpdated()
-            if (presenter.isInSession.value != true) {
-                binding.teiRecycler.visibility = View.GONE
-                binding.notAuthenticated?.visibility = View.VISIBLE
-                Timber.d("No session, Hiding Stages")
-            } else {
-                binding.teiRecycler.visibility = View.VISIBLE
-                binding.notAuthenticated?.visibility = View.GONE
-            }
-        }
     }
 
     private fun showDetailCard() {
@@ -321,7 +306,8 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
                 onUpdateBiometryClicked = {
                     presenter.onUpdateBiometryClicked()
                 },
-                isInSession = isInSession.value!!
+                isInSession = isInSession.value!!,
+                isRestrictedTei = presenter.isRestrictedTei.observeAsState()
             )
         }
     }
@@ -370,8 +356,28 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
     override fun onResume() {
         super.onResume()
         presenter.init()
+        presenter.session.observe(viewLifecycleOwner) {
+            presenter.onSessionUpdated()
+        }
+        presenter.isInSession.observe(viewLifecycleOwner) {
+            userAuthSessionUpdated()
+        }
+        presenter.isRestrictedTei.observe(viewLifecycleOwner) {
+            userAuthSessionUpdated()
+        }
         if (!showAllEnrollment) {
             dashboardViewModel.updateDashboard()
+        }
+    }
+
+    private fun userAuthSessionUpdated() {
+        if (presenter.isInSession.value != true && presenter.isRestrictedTei.value == true) {
+            binding.teiRecycler.visibility = View.GONE
+            binding.notAuthenticated?.visibility = View.VISIBLE
+            Timber.d("No session, Hiding Stages")
+        } else {
+            binding.teiRecycler.visibility = View.VISIBLE
+            binding.notAuthenticated?.visibility = View.GONE
         }
     }
 
@@ -429,9 +435,10 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
 
     override fun setEvents(events: List<EventViewModel>) {
         if (events.isEmpty()) {
-            binding.emptyTeis.visibility = View.VISIBLE
+            if (presenter.isInSession.value == true || presenter.isRestrictedTei.value == false) {
+                binding.emptyTeis.visibility = View.VISIBLE
+            }
             binding.teiRecycler.visibility = View.GONE
-            binding.notAuthenticated?.visibility = View.GONE
 
             if (presenter.shouldDisplayEventCreationButton.value == true) {
                 binding.emptyTeis.setText(R.string.empty_tei_add)
@@ -440,8 +447,9 @@ class TEIDataFragment : FragmentGlobalAbstract(), TEIDataContracts.View,
             }
         } else {
             binding.emptyTeis.visibility = View.GONE
-            binding.teiRecycler.visibility = View.VISIBLE
-            binding.notAuthenticated?.visibility = View.GONE
+            if (presenter.isInSession.value == true || presenter.isRestrictedTei.value == false) {
+                binding.teiRecycler.visibility = View.VISIBLE
+            }
 
             eventAdapter?.submitList(events)
             for (eventViewModel in events) {

@@ -41,4 +41,5 @@ interface TeiDataRepository {
 
     fun saveVenoAppPseudonym(pseudonym: String): Single<Boolean>
     fun getVenoAppPseudonym(): Single<String>
+    fun requiresAuthentication(): Single<Boolean>
 }

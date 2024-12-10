@@ -122,6 +122,8 @@ class TEIDataPresenter(
     val session: LiveData<Pair<Boolean, String>> = sessionManager.session
     private val _isInSession: MutableLiveData<Boolean> = MutableLiveData(false)
     val isInSession: LiveData<Boolean> = _isInSession
+    private val _isRestrictedTei: MutableLiveData<Boolean> = MutableLiveData(false)
+    val isRestrictedTei: LiveData<Boolean> = _isRestrictedTei
 
     fun init() {
         programUid?.let {
@@ -205,6 +207,13 @@ class TEIDataPresenter(
         )
 
         getVenoAppPseudonym()
+        compositeDisposable.add(
+            teiDataRepository.requiresAuthentication().subscribeOn(schedulerProvider.io())
+                .observeOn(schedulerProvider.ui())
+                .subscribe({
+                    _isRestrictedTei.postValue(it)
+                }, Timber::e)
+        )
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)

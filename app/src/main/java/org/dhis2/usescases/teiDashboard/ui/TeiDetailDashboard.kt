@@ -86,6 +86,7 @@ fun TeiDetailDashboard(
     pseudonym: State<String?>,
     onUpdateBiometryClicked: () -> Unit,
     isInSession: Boolean,
+    isRestrictedTei: State<Boolean?>,
 ) {
     Column(
         modifier = Modifier
@@ -158,13 +159,15 @@ fun TeiDetailDashboard(
             )
         }
 
-        BiometryAuthButton(
-            hasPseudonym = !pseudonym.value.isNullOrEmpty(),
-            isAuthenticated = isInSession,
-            onCreateBiometryClicked = onCreateBiometryClicked,
-            onAuthenticateWithBiometryClicked = onAuthenticateWithBiometryClicked,
-            onUpdateBiometryClicked = onUpdateBiometryClicked
-        )
+        if (isRestrictedTei.value == true) {
+            BiometryAuthButton(
+                hasPseudonym = !pseudonym.value.isNullOrEmpty(),
+                isAuthenticated = isInSession,
+                onCreateBiometryClicked = onCreateBiometryClicked,
+                onAuthenticateWithBiometryClicked = onAuthenticateWithBiometryClicked,
+                onUpdateBiometryClicked = onUpdateBiometryClicked
+            )
+        }
 
         if (currentProgramId == "JuDBc7Wx3wG") {
             GraduationStatusView(

@@ -600,7 +600,7 @@ class TeiDataRepositoryImpl(
 
         return d2.trackedEntityModule().trackedEntityAttributeValues()
             .value(pseudonymAttributeUid, teiUid)
-            .get().map { it.value() }
+            .get().map { it.value() ?: "" }
     }
 
 
@@ -617,12 +617,28 @@ class TeiDataRepositoryImpl(
                 Timber.d("Pseudonym Saved: $pseudonym")
                 emitter.onSuccess(true)
             } catch (ex: Exception) {
-                // Log detailed error information
                 if (ex is D2Error) {
                     Timber.e(ex, "D2Error occurred: ${ex.message}")
                 } else {
                     Timber.e(ex, "Exception occurred while saving pseudonym")
                 }
+                emitter.onSuccess(false)
+            }
+        }
+    }
+
+    override fun requiresAuthentication(): Single<Boolean> {
+        val restrictedTeiTypes = listOf("EMdK2EGQS6x", "H3ek7JO2ajm", "dbHBSY6hTo8")
+        return Single.create { emitter ->
+            try {
+                val teiType = d2.trackedEntityModule()
+                    .trackedEntityInstances().uid(teiUid)
+                    .blockingGet()?.trackedEntityType()
+
+                Timber.d("TEI Type: $teiType")
+                emitter.onSuccess(teiType in restrictedTeiTypes)
+            } catch (ex: Exception) {
+                Timber.e(ex)
                 emitter.onSuccess(false)
             }
         }
